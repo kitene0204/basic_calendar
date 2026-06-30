@@ -261,7 +261,7 @@ export default function Calendar({
                     return (
                       <span 
                         key={sid} 
-                        className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded border leading-none truncate font-bold ${badgeColor}`}
+                        className={`text-[11px] sm:text-[12.5px] px-1.5 py-0.5 rounded border leading-none truncate font-extrabold ${badgeColor}`}
                       >
                         {s.name}
                       </span>
