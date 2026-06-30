@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학급 기초학력 지도 달력 (단독 실행형)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- React 및 Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Supabase JS CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        /* Custom animations for smooth panels */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+        .animate-slide-in {
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        /* Scrollbar custom styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, FormEvent } = React;
+
+        // ----------------------------------------------------
+        // 1. LIGHTWEIGHT ICON COMPONENT (No CDN delay / Offline proof)
+        // ----------------------------------------------------
+        function Icon({ name, size = 16, className = "" }) {
+            const svgs = {
+                Calendar: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>
+                    </svg>
+                ),
+                LayoutDashboard: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
+                    </svg>
+                ),
+                Settings: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                ),
+                RefreshCw: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/>
+                    </svg>
+                ),
+                ChevronLeft: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                ),
+                ChevronRight: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="m9 18 6-6-6-6"/>
+                    </svg>
+                ),
+                CheckCircle2: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+                    </svg>
+                ),
+                CheckCircle: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+                    </svg>
+                ),
+                BookOpen: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                ),
+                Users: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                ),
+                Award: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <circle cx="12" cy="8" r="7"/><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/>
+                    </svg>
+                ),
+                Search: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                ),
+                ArrowRight: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                    </svg>
+                ),
+                TrendingUp: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+                    </svg>
+                ),
+                X: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                ),
+                UserPlus: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/>
+                    </svg>
+                ),
+                Trash2: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+                    </svg>
+                ),
+                Cloud: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.89-2.22-3.5-4.5-3.5C8.84 7.5 7 9.5 7 11.5c-2.46 0-4 1.71-4 4.5A3.5 3.5 0 0 0 6.5 19z"/>
+                    </svg>
+                ),
+                HelpCircle: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/>
+                    </svg>
+                ),
+                Save: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>
+                    </svg>
+                ),
+                Database: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/>
+                    </svg>
+                ),
+                AlertCircle: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+                    </svg>
+                ),
+                Copy: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                ),
+                Check: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                ),
+                CloudLightning: (
+                    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                        <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58"/><polyline points="13 11 9 17 12 17 10 23 15 15 12 15 13 11"/>
+                    </svg>
+                )
+            };
+            return svgs[name] || null;
+        }
+
+        // ----------------------------------------------------
+        // 2. SUPABASE SYNC CONFIG & HELPERS (LocalStorage Fallback)
+        // ----------------------------------------------------
+        let supabaseInstance = null;
+
+        const STORAGE_KEYS = {
+            STUDENTS: 'edu_calendar_students',
+            RECORDS: 'edu_calendar_records',
+            MAX_HOURS_MIDDLE: 'edu_calendar_max_hours_middle',
+            MAX_HOURS_FIRST: 'edu_calendar_max_hours_first'
+        };
+
+        const INITIAL_STUDENTS = [
+            { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
+            { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
+            { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() },
+            { id: 'student-4', name: '강주연', group: '1순위', createdAt: new Date().toISOString() }
+        ];
+
+        const SUPABASE_SQL_SETUP = `-- Supabase SQL Editor에 복사해서 붙여넣고 실행하세요!
+
+-- 1. 학생(students) 테이블 생성
+CREATE TABLE IF NOT EXISTS students (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  "group" TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. 지도 기록(records) 테이블 생성
+CREATE TABLE IF NOT EXISTS records (
+  date TEXT PRIMARY KEY, -- YYYY-MM-DD
+  student_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+  notes JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. 설정(settings) 테이블 생성
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- RLS 활성화 및 권한 설정
+ALTER TABLE students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read/write" ON students FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write" ON records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CHECK (true);`;
+
+        function getSupabaseCredentials() {
+            const localUrl = localStorage.getItem('custom_supabase_url') || '';
+            const localKey = localStorage.getItem('custom_supabase_anon_key') || '';
+            const isValidUrl = localUrl && localUrl.startsWith('http') && !localUrl.includes('your-project');
+            const isValidKey = localKey && localKey.length > 20 && !localKey.includes('your-anon-key');
+
+            return { url: localUrl, key: localKey, isValid: !!(isValidUrl && isValidKey) };
+        }
+
+        function getSupabaseClient() {
+            if (supabaseInstance) return supabaseInstance;
+            const { url, key, isValid } = getSupabaseCredentials();
+            if (isValid && window.supabase) {
+                try {
+                    supabaseInstance = window.supabase.createClient(url, key, {
+                        auth: { persistSession: true }
+                    });
+                    return supabaseInstance;
+                } catch (e) {
+                    console.error('Supabase Client initialization failed:', e);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function resetSupabaseClient() {
+            supabaseInstance = null;
+        }
+
+        async function fetchStudents() {
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    const { data, error } = await client
+                        .from('students')
+                        .select('*')
+                        .order('name', { ascending: true });
+                    
+                    if (!error && data) {
+                        const students = data.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            group: item.group,
+                            createdAt: item.created_at
+                        }));
+                        if (students.length === 0) {
+                            await saveStudents(INITIAL_STUDENTS);
+                            return INITIAL_STUDENTS;
+                        }
+                        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+                        return students;
+                    }
+                } catch (e) {
+                    console.error('Supabase connection failed:', e);
+                }
+            }
+            const local = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+            if (local) return JSON.parse(local);
+            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
+            return INITIAL_STUDENTS;
+        }
+
+        async function saveStudents(students) {
+            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    const upsertData = students.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        group: s.group,
+                        created_at: s.createdAt
+                    }));
+                    await client.from('students').upsert(upsertData, { onConflict: 'id' });
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            return true;
+        }
+
+        async function deleteStudentFromDb(studentId) {
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    await client.from('students').delete().eq('id', studentId);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            return true;
+        }
+
+        async function fetchRecords() {
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    const { data, error } = await client.from('records').select('*');
+                    if (!error && data) {
+                        const records = data.map(item => ({
+                            id: item.date,
+                            date: item.date,
+                            studentIds: Array.isArray(item.student_ids) ? item.student_ids : JSON.parse(item.student_ids || '[]'),
+                            notes: typeof item.notes === 'object' && item.notes !== null ? item.notes : JSON.parse(item.notes || '{}'),
+                            updatedAt: item.updated_at
+                        }));
+                        localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
+                        return records;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            const local = localStorage.getItem(STORAGE_KEYS.RECORDS);
+            return local ? JSON.parse(local) : [];
+        }
+
+        async function saveRecord(record) {
+            const localRecords = await fetchRecords();
+            const idx = localRecords.findIndex(r => r.date === record.date);
+            if (idx >= 0) {
+                localRecords[idx] = record;
+            } else {
+                localRecords.push(record);
+            }
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(localRecords));
+
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    await client.from('records').upsert({
+                        date: record.date,
+                        student_ids: record.studentIds,
+                        notes: record.notes,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'date' });
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            return true;
+        }
+
+        async function fetchMaxHours(group) {
+            const client = getSupabaseClient();
+            const keyName = group === '중위권' ? 'max_hours_middle' : 'max_hours_first';
+            const storageKey = group === '중위권' ? STORAGE_KEYS.MAX_HOURS_MIDDLE : STORAGE_KEYS.MAX_HOURS_FIRST;
+            const defaultVal = group === '중위권' ? 20 : 30;
+
+            if (client) {
+                try {
+                    const { data, error } = await client.from('settings').select('value').eq('key', keyName).single();
+                    if (!error && data) {
+                        const val = parseInt(data.value, 10);
+                        localStorage.setItem(storageKey, val.toString());
+                        return val;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            const local = localStorage.getItem(storageKey);
+            return local ? parseInt(local, 10) : defaultVal;
+        }
+
+        async function saveMaxHours(group, hours) {
+            const keyName = group === '중위권' ? 'max_hours_middle' : 'max_hours_first';
+            const storageKey = group === '중위권' ? STORAGE_KEYS.MAX_HOURS_MIDDLE : STORAGE_KEYS.MAX_HOURS_FIRST;
+            localStorage.setItem(storageKey, hours.toString());
+
+            const client = getSupabaseClient();
+            if (client) {
+                try {
+                    await client.from('settings').upsert({ key: keyName, value: hours.toString() }, { onConflict: 'key' });
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            return true;
+        }
+
+        // ----------------------------------------------------
+        // 3. LIGHTWEIGHT SVG BAR CHART (Completely standalone)
+        // ----------------------------------------------------
+        function SVGBarChart({ data }) {
+            const maxVal = Math.max(...data.map(d => d.count), 1);
+            
+            if (data.length === 0) {
+                return (
+                    <div className="h-48 flex items-center justify-center text-xs text-slate-400 italic">
+                        표시할 학생 데이터가 없습니다.
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex items-end justify-around h-48 pt-6 px-2 border-b border-slate-100">
+                    {data.map((item, idx) => {
+                        const heightPercent = (item.count / maxVal) * 100;
+                        const barColor = item.그룹 === '1순위' 
+                            ? 'bg-[#FF4D6D]' 
+                            : item.그룹 === '중위권' 
+                            ? 'bg-[#00B4D8]' 
+                            : 'bg-slate-400';
+                        return (
+                            <div key={idx} className="flex flex-col items-center flex-1 group relative">
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full mb-2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap pointer-events-none font-bold shadow-md z-10">
+                                    {item.name}: {item.count}회
+                                </div>
+                                {/* Bar */}
+                                <div 
+                                    className={`w-6 sm:w-8 ${barColor} rounded-t transition-all duration-500`}
+                                    style={{ height: `${heightPercent}%`, minHeight: item.count > 0 ? '4px' : '1px' }}
+                                />
+                                {/* Label */}
+                                <span className="text-[10px] text-slate-500 font-bold mt-2 truncate w-full text-center">
+                                    {item.name}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // ----------------------------------------------------
+        // 4. CALENDAR COMPONENT
+        // ----------------------------------------------------
+        function Calendar({
+            students,
+            records,
+            selectedDate,
+            onSelectDate,
+            maxHoursMiddle,
+            maxHoursFirst,
+            isSupabaseEnabled,
+            onOpenSettings
+        }) {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+            const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+            const formatDateString = (d) => {
+                const mm = String(month + 1).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                return `${year}-${mm}-${dd}`;
+            };
+
+            const getTodayString = () => {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+
+            const todayStr = getTodayString();
+            const getRecordForDate = (dateStr) => records.find(r => r.date === dateStr);
+
+            let middleTeachingCount = 0;
+            let firstTeachingCount = 0;
+
+            records.forEach(record => {
+                let hasMiddle = false;
+                let hasFirst = false;
+                record.studentIds.forEach(sid => {
+                    const student = students.find(s => s.id === sid);
+                    if (student) {
+                        if (student.group === '중위권') hasMiddle = true;
+                        else if (student.group === '1순위') hasFirst = true;
+                    }
+                });
+                if (hasMiddle) middleTeachingCount++;
+                if (hasFirst) firstTeachingCount++;
+            });
+
+            const middleRemaining = Math.max(0, maxHoursMiddle - middleTeachingCount);
+            const firstRemaining = Math.max(0, maxHoursFirst - firstTeachingCount);
+
+            const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+            const blanks = Array(firstDayOfMonth).fill(null);
+            const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+            const calendarCells = [...blanks, ...days];
+
+            return (
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden" id="calendar-container">
+                    {/* Header */}
+                    <div className="bg-[#727CF5] px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-white">
+                        <div className="flex items-center space-x-3">
+                            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">기초학력 지도 달력</h1>
+                            {isSupabaseEnabled ? (
+                                <span className="bg-emerald-500 text-white text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-400 animate-pulse">
+                                    클라우드 저장 (Supabase)
+                                </span>
+                            ) : (
+                                <span className="bg-amber-400 text-yellow-950 text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full">
+                                    로컬 저장 모드
+                                </span>
+                            )}
+                            
+                            <button 
+                                onClick={onOpenSettings}
+                                className="p-1.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+                                title="설정창 열기"
+                            >
+                                <Icon name="Settings" size={20} className="text-white" />
+                            </button>
+                        </div>
+
+                        {/* Month navigation */}
+                        <div className="flex items-center justify-end space-x-4">
+                            <button onClick={prevMonth} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer" title="이전 달">
+                                <Icon name="ChevronLeft" size={20} />
+                            </button>
+                            <span className="text-lg sm:text-xl font-bold min-w-[120px] text-center">
+                                {year}년 {month + 1}월
+                            </span>
+                            <button onClick={nextMonth} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer" title="다음 달">
+                                <Icon name="ChevronRight" size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <span className="w-3 h-3 rounded-full bg-[#00B4D8]" />
+                                <span className="font-bold text-slate-800 text-sm sm:text-base">중위권</span>
+                                <span className="text-xs text-slate-400">지도 {middleTeachingCount}회</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs text-slate-400 block sm:inline mr-2">남은 시수:</span>
+                                <span className="font-extrabold text-[#00B4D8] text-base sm:text-lg">{middleRemaining}</span>
+                                <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursMiddle}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <span className="w-3 h-3 rounded-full bg-[#FF4D6D]" />
+                                <span className="font-bold text-slate-800 text-sm sm:text-base">1순위</span>
+                                <span className="text-xs text-slate-400">지도 {firstTeachingCount}회</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs text-slate-400 block sm:inline mr-2">남은 시수:</span>
+                                <span className="font-extrabold text-[#FF4D6D] text-base sm:text-lg">{firstRemaining}</span>
+                                <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursFirst}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Calendar cells */}
+                    <div className="p-6">
+                        <div className="grid grid-cols-7 gap-2 text-center mb-3">
+                            {DAYS_OF_WEEK.map((day, index) => (
+                                <div key={day} className={`text-sm font-bold py-1.5 ${
+                                    index === 0 ? 'text-[#FF4D6D]' : index === 6 ? 'text-[#00B4D8]' : 'text-slate-400'
+                                }`}>
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-2 sm:gap-3">
+                            {calendarCells.map((day, index) => {
+                                if (day === null) {
+                                    return <div key={`blank-${index}`} className="aspect-square bg-slate-50/30 rounded-xl border border-dashed border-slate-100" />;
+                                }
+
+                                const dateStr = formatDateString(day);
+                                const isSelected = selectedDate === dateStr;
+                                const isToday = todayStr === dateStr;
+                                const record = getRecordForDate(dateStr);
+                                const hasRecord = record && record.studentIds.length > 0;
+
+                                const dayOfWeek = index % 7;
+                                let dayColorClass = 'text-slate-700';
+                                if (dayOfWeek === 0) dayColorClass = 'text-[#FF4D6D]';
+                                if (dayOfWeek === 6) dayColorClass = 'text-[#00B4D8]';
+
+                                return (
+                                    <button
+                                        key={`day-${day}`}
+                                        onClick={() => onSelectDate(dateStr)}
+                                        className={`aspect-square p-2 rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group cursor-pointer ${
+                                            isSelected
+                                                ? 'border-indigo-600 bg-indigo-50/40 ring-3 ring-indigo-500/10 scale-[1.02]'
+                                                : isToday
+                                                ? 'border-indigo-200 bg-slate-50'
+                                                : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50/60'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between w-full">
+                                            <span className={`text-xs sm:text-sm font-bold ${
+                                                isSelected ? 'text-indigo-600 font-extrabold' : dayColorClass
+                                            } ${isToday ? 'bg-[#727CF5] text-white w-5.5 h-5.5 flex items-center justify-center rounded-full text-[11px]' : ''}`}>
+                                                {day}
+                                            </span>
+                                            {hasRecord && (
+                                                <Icon name="CheckCircle2" size={13} className="text-emerald-500 fill-emerald-50" />
+                                            )}
+                                        </div>
+
+                                        <div className="w-full mt-1.5 overflow-hidden flex flex-col gap-0.5 pointer-events-none">
+                                            {record && record.studentIds.map(sid => {
+                                                const s = students.find(x => x.id === sid);
+                                                if (!s) return null;
+                                                
+                                                const badgeColor = s.group === '1순위' 
+                                                    ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
+                                                    : s.group === '중위권' 
+                                                    ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
+                                                    : 'bg-slate-50 text-slate-500 border-slate-100';
+
+                                                return (
+                                                    <span key={sid} className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded border leading-none truncate font-bold ${badgeColor}`}>
+                                                        {s.name}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ----------------------------------------------------
+        // 5. TEACHING RECORD PANEL COMPONENT
+        // ----------------------------------------------------
+        function TeachingRecordPanel({ selectedDate, students, record, onSaveRecord, onClose }) {
+            const formatDateKorean = (dateStr) => {
+                if (!dateStr) return '';
+                const [year, month, day] = dateStr.split('-');
+                return `${year}년 ${month}월 ${day}일`;
+            };
+
+            const currentStudentIds = record?.studentIds || [];
+            const currentNotes = record?.notes || {};
+
+            const handleToggleStudent = (studentId) => {
+                let newStudentIds = [...currentStudentIds];
+                let newNotes = { ...currentNotes };
+
+                if (newStudentIds.includes(studentId)) {
+                    newStudentIds = newStudentIds.filter(id => id !== studentId);
+                    delete newNotes[studentId];
+                } else {
+                    newStudentIds.push(studentId);
+                    newNotes[studentId] = newNotes[studentId] || '';
+                }
+
+                onSaveRecord({
+                    id: selectedDate,
+                    date: selectedDate,
+                    studentIds: newStudentIds,
+                    notes: newNotes,
+                    updatedAt: new Date().toISOString()
+                });
+            };
+
+            const handleNoteChange = (studentId, noteText) => {
+                const newNotes = { ...currentNotes, [studentId]: noteText };
+                onSaveRecord({
+                    id: selectedDate,
+                    date: selectedDate,
+                    studentIds: currentStudentIds,
+                    notes: newNotes,
+                    updatedAt: new Date().toISOString()
+                });
+            };
+
+            const middleStudents = students.filter(s => s.group === '중위권');
+            const firstStudents = students.filter(s => s.group === '1순위');
+            const otherStudents = students.filter(s => s.group === '기타');
+
+            return (
+                <div className="bg-white h-full rounded-2xl shadow-xl border border-slate-100 flex flex-col overflow-hidden" id="record-panel">
+                    <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                                {formatDateKorean(selectedDate)}
+                            </h2>
+                            <p className="text-xs text-slate-400 mt-1">해당 날짜에 지도한 학생을 선택하세요.</p>
+                        </div>
+                        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer">
+                            <Icon name="X" size={20} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        {/* 중위권 */}
+                        <div>
+                            <div className="flex items-center space-x-2 mb-3">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#00B4D8]" />
+                                <h3 className="text-sm font-bold text-[#00B4D8]">중위권</h3>
+                            </div>
+                            {middleStudents.length === 0 ? (
+                                <p className="text-xs text-slate-400 italic py-2 pl-4">등록된 중위권 학생이 없습니다.</p>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {middleStudents.map(student => {
+                                        const isSelected = currentStudentIds.includes(student.id);
+                                        return (
+                                            <button
+                                                key={student.id}
+                                                onClick={() => handleToggleStudent(student.id)}
+                                                className={`py-3 px-4 rounded-xl font-bold text-center border transition-all duration-150 flex items-center justify-center space-x-2 cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-sky-50 text-[#00B4D8] border-[#00B4D8] ring-2 ring-sky-100 scale-[1.02]'
+                                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                                                }`}
+                                            >
+                                                <span>{student.name}</span>
+                                                {isSelected && <Icon name="CheckCircle" size={14} className="text-[#00B4D8] fill-sky-50" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 1순위 */}
+                        <div>
+                            <div className="flex items-center space-x-2 mb-3">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF4D6D]" />
+                                <h3 className="text-sm font-bold text-[#FF4D6D]">1순위</h3>
+                            </div>
+                            {firstStudents.length === 0 ? (
+                                <p className="text-xs text-slate-400 italic py-2 pl-4">등록된 1순위 학생이 없습니다.</p>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {firstStudents.map(student => {
+                                        const isSelected = currentStudentIds.includes(student.id);
+                                        return (
+                                            <button
+                                                key={student.id}
+                                                onClick={() => handleToggleStudent(student.id)}
+                                                className={`py-3 px-4 rounded-xl font-bold text-center border transition-all duration-150 flex items-center justify-center space-x-2 cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-rose-50 text-[#FF4D6D] border-[#FF4D6D] ring-2 ring-rose-100 scale-[1.02]'
+                                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                                                }`}
+                                            >
+                                                <span>{student.name}</span>
+                                                {isSelected && <Icon name="CheckCircle" size={14} className="text-[#FF4D6D] fill-rose-50" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 기타 */}
+                        {otherStudents.length > 0 && (
+                            <div>
+                                <div className="flex items-center space-x-2 mb-3">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                                    <h3 className="text-sm font-bold text-slate-500">기타 대상 학생</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {otherStudents.map(student => {
+                                        const isSelected = currentStudentIds.includes(student.id);
+                                        return (
+                                            <button
+                                                key={student.id}
+                                                onClick={() => handleToggleStudent(student.id)}
+                                                className={`py-3 px-4 rounded-xl font-bold text-center border transition-all duration-150 flex items-center justify-center space-x-2 cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-slate-100 text-slate-700 border-slate-400'
+                                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                                                }`}
+                                            >
+                                                <span>{student.name}</span>
+                                                {isSelected && <Icon name="CheckCircle" size={14} className="text-slate-600" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Notes */}
+                        {currentStudentIds.length > 0 && (
+                            <div className="pt-4 border-t border-slate-100 space-y-4">
+                                <div className="flex items-center space-x-2">
+                                    <Icon name="BookOpen" size={16} className="text-indigo-500" />
+                                    <h3 className="text-sm font-bold text-slate-700">학생별 지도 내용 기록</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    {currentStudentIds.map(studentId => {
+                                        const student = students.find(s => s.id === studentId);
+                                        if (!student) return null;
+
+                                        const tagColor = student.group === '1순위' 
+                                            ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
+                                            : student.group === '중위권' 
+                                            ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
+                                            : 'bg-slate-50 text-slate-500 border-slate-100';
+
+                                        return (
+                                            <div key={studentId} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-bold text-slate-800 text-xs sm:text-sm">{student.name}</span>
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${tagColor}`}>
+                                                        {student.group}
+                                                    </span>
+                                                </div>
+                                                <textarea
+                                                    value={currentNotes[studentId] || ''}
+                                                    onChange={(e) => handleNoteChange(studentId, e.target.value)}
+                                                    placeholder={`${student.name} 학생의 구체적인 지도 내용(활동, 성취도, 특이사항 등)을 기록해 주세요.`}
+                                                    className="w-full h-18 text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none font-sans text-slate-600"
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border-t border-slate-100">
+                        <button onClick={onClose} className="w-full py-3.5 bg-[#2E3243] hover:bg-[#1E212E] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg text-center cursor-pointer">
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ----------------------------------------------------
+        // 6. SETTINGS PANEL COMPONENT
+        // ----------------------------------------------------
+        function SettingsPanel({
+            students,
+            onAddStudent,
+            onDeleteStudent,
+            maxHoursMiddle,
+            maxHoursFirst,
+            onSaveMaxHours,
+            onClose,
+            onSupabaseConfigChange
+        }) {
+            const [newStudentName, setNewStudentName] = useState('');
+            const [newStudentGroup, setNewStudentGroup] = useState('중위권');
+            const [inputMiddleHours, setInputMiddleHours] = useState(maxHoursMiddle);
+            const [inputFirstHours, setInputFirstHours] = useState(maxHoursFirst);
+
+            const [sbUrl, setSbUrl] = useState('');
+            const [sbKey, setSbKey] = useState('');
+            const [isCopied, setIsCopied] = useState(false);
+            const [isDbTesting, setIsDbTesting] = useState(false);
+            const [dbTestResult, setDbTestResult] = useState(null);
+
+            useEffect(() => {
+                const { url, key } = getSupabaseCredentials();
+                setSbUrl(url);
+                setSbKey(key);
+            }, []);
+
+            const handleAddStudentSubmit = (e) => {
+                e.preventDefault();
+                if (!newStudentName.trim()) return;
+                onAddStudent(newStudentName.trim(), newStudentGroup);
+                setNewStudentName('');
+            };
+
+            const handleSaveSettings = () => {
+                onSaveMaxHours('중위권', inputMiddleHours);
+                onSaveMaxHours('1순위', inputFirstHours);
+
+                localStorage.setItem('custom_supabase_url', sbUrl.trim());
+                localStorage.setItem('custom_supabase_anon_key', sbKey.trim());
+                
+                onSupabaseConfigChange();
+                alert('설정이 저장되었습니다.');
+            };
+
+            const handleCopySql = () => {
+                navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
+                setIsCopied(true);
+                setTimeout(() => setIsCopied(false), 2000);
+            };
+
+            const handleTestConnection = async () => {
+                if (!sbUrl || !sbKey) {
+                    setDbTestResult({ success: false, msg: 'URL과 Anon Key를 모두 입력해 주세요.' });
+                    return;
+                }
+
+                setIsDbTesting(true);
+                setDbTestResult(null);
+
+                try {
+                    if (!window.supabase) {
+                        throw new Error('Supabase SDK가 준비되지 않았습니다.');
+                    }
+                    const testClient = window.supabase.createClient(sbUrl, sbKey);
+                    const { error } = await testClient.from('students').select('id').limit(1);
+                    
+                    if (error) {
+                        if (error.code === 'PGRST116' || error.message.includes('does not exist')) {
+                            setDbTestResult({ 
+                                success: true, 
+                                msg: '연결 성공! 단, 테이블이 존재하지 않습니다. 아래 SQL을 실행하여 테이블을 생성하세요.' 
+                            });
+                        } else {
+                            setDbTestResult({ success: false, msg: `연결 실패: ${error.message}` });
+                        }
+                    } else {
+                        setDbTestResult({ success: true, msg: '연결 성공! 테이블과 통신이 원활합니다.' });
+                    }
+                } catch (err) {
+                    setDbTestResult({ success: false, msg: `연결 실패: ${err.message || err}` });
+                } finally {
+                    setIsDbTesting(false);
+                }
+            };
+
+            return (
+                <div className="bg-white h-full rounded-2xl shadow-xl border border-slate-100 flex flex-col overflow-hidden" id="settings-panel">
+                    <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                            <Icon name="Database" size={20} className="text-[#727CF5]" />
+                            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">설정 및 학생 관리</h2>
+                        </div>
+                        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer">
+                            <Icon name="X" size={20} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                        {/* 최대 지도 시수 */}
+                        <section className="space-y-4">
+                            <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
+                                <span className="w-1.5 h-4 bg-[#727CF5] rounded-full inline-block" />
+                                <span>최대 지도 시수 설정</span>
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">중위권 최대 시수</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="number"
+                                            value={inputMiddleHours}
+                                            onChange={(e) => setInputMiddleHours(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                        />
+                                        <span className="text-xs text-slate-400 font-medium">회</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">1순위 최대 시수</label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="number"
+                                            value={inputFirstHours}
+                                            onChange={(e) => setInputFirstHours(Math.max(1, parseInt(e.target.value, 10) || 0))}
+                                            className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                        />
+                                        <span className="text-xs text-slate-400 font-medium">회</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 명단 관리 */}
+                        <section className="space-y-4">
+                            <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
+                                <span className="w-1.5 h-4 bg-[#727CF5] rounded-full inline-block" />
+                                <span>학생 명단 관리 ({students.length}명)</span>
+                            </h3>
+                            <form onSubmit={handleAddStudentSubmit} className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="새 학생 이름"
+                                    value={newStudentName}
+                                    onChange={(e) => setNewStudentName(e.target.value)}
+                                    className="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#727CF5] text-slate-700 font-medium"
+                                />
+                                <select
+                                    value={newStudentGroup}
+                                    onChange={(e) => setNewStudentGroup(e.target.value)}
+                                    className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#727CF5] text-slate-600 font-bold"
+                                >
+                                    <option value="중위권">중위권</option>
+                                    <option value="1순위">1순위</option>
+                                    <option value="기타">기타</option>
+                                </select>
+                                <button type="submit" className="bg-[#727CF5] hover:bg-[#5C66E4] text-white p-2.5 rounded-xl flex items-center justify-center transition-colors shadow-xs cursor-pointer" title="학생 추가">
+                                    <Icon name="UserPlus" size={18} />
+                                </button>
+                            </form>
+
+                            <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                                {students.length === 0 ? (
+                                    <div className="p-6 text-center text-slate-400 text-xs italic">등록된 학생이 없습니다.</div>
+                                ) : (
+                                    students.map(student => {
+                                        const groupBadgeColor = student.group === '1순위' 
+                                            ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
+                                            : student.group === '중위권' 
+                                            ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
+                                            : 'bg-slate-50 text-slate-500 border-slate-100';
+
+                                        return (
+                                            <div key={student.id} className="p-3 bg-white flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                                <div className="flex items-center space-x-2.5">
+                                                    <span className="font-bold text-slate-800 text-sm">{student.name}</span>
+                                                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full border ${groupBadgeColor}`}>
+                                                        {student.group}
+                                                    </span>
+                                                </div>
+                                                <button onClick={() => onDeleteStudent(student.id)} className="p-1 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded transition-all cursor-pointer" title={`${student.name} 삭제`}>
+                                                    <Icon name="Trash2" size={16} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </section>
+
+                        {/* Supabase */}
+                        <section className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
+                                    <Icon name="Cloud" size={18} className="text-[#727CF5]" />
+                                    <span>실시간 클라우드 동기화 (Supabase)</span>
+                                </h3>
+                                <span className="text-[10px] text-slate-400 font-mono">기기 간 실시간 공유</span>
+                            </div>
+
+                            <div className="space-y-4 bg-slate-50 p-4.5 rounded-xl border border-slate-100">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Supabase Project URL</label>
+                                    <input
+                                        type="text"
+                                        placeholder="https://your-project.supabase.co"
+                                        value={sbUrl}
+                                        onChange={(e) => setSbUrl(e.target.value)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Supabase Anon API Key</label>
+                                    <input
+                                        type="text"
+                                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                        value={sbKey}
+                                        onChange={(e) => setSbKey(e.target.value)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-between pt-2">
+                                    <button type="button" onClick={handleTestConnection} disabled={isDbTesting} className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-[#727CF5] font-bold text-xs rounded-lg border border-indigo-100 transition-colors cursor-pointer">
+                                        {isDbTesting ? '연결 확인 중...' : '연결 및 테이블 확인'}
+                                    </button>
+                                    {dbTestResult && (
+                                        <div className={`text-[11px] font-medium max-w-[200px] text-right ${dbTestResult.success ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                            {dbTestResult.msg}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50 space-y-2.5">
+                                <div className="flex items-start space-x-2">
+                                    <Icon name="AlertCircle" size={15} className="text-[#727CF5] shrink-0 mt-0.5" />
+                                    <p className="text-xs text-indigo-950 font-medium leading-relaxed">
+                                        Supabase를 연동하려면 데이터베이스에 테이블이 존재해야 합니다. 아래 SQL을 복사하여 Supabase <b>SQL Editor</b>에 붙여넣고 실행(Run)해 주세요.
+                                    </p>
+                                </div>
+                                <div className="relative">
+                                    <pre className="bg-[#1E293B] text-slate-300 text-[9px] p-3 rounded-lg overflow-x-auto font-mono max-h-36">
+                                        {SUPABASE_SQL_SETUP}
+                                    </pre>
+                                    <button type="button" onClick={handleCopySql} className="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-white p-1.5 rounded-md transition-colors cursor-pointer" title="SQL 복사하기">
+                                        {isCopied ? <Icon name="Check" size={12} className="text-emerald-400" /> : <Icon name="Copy" size={12} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex space-x-2">
+                        <button onClick={handleSaveSettings} className="flex-1 py-3.5 bg-[#727CF5] hover:bg-[#5C66E4] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 text-sm cursor-pointer">
+                            <Icon name="Save" size={16} />
+                            <span>모든 설정 저장</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // ----------------------------------------------------
+        // 7. DASHBOARD COMPONENT
+        // ----------------------------------------------------
+        function Dashboard({ students, records, maxHoursMiddle, maxHoursFirst }) {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedGroupFilter, setSelectedGroupFilter] = useState('전체');
+            const [selectedStudentId, setSelectedStudentId] = useState(null);
+
+            const studentStats = students.map(student => {
+                const tutoredRecords = records.filter(r => r.studentIds.includes(student.id))
+                    .sort((a, b) => b.date.localeCompare(a.date));
+
+                const count = tutoredRecords.length;
+                const maxLimit = student.group === '중위권' ? maxHoursMiddle : student.group === '1순위' ? maxHoursFirst : 10;
+                const progress = Math.min(100, Math.round((count / maxLimit) * 100));
+
+                return {
+                    ...student,
+                    count,
+                    maxLimit,
+                    progress,
+                    history: tutoredRecords.map(r => ({
+                        date: r.date,
+                        note: r.notes[student.id] || '지도 기록 내용이 없습니다.'
+                    }))
+                };
+            });
+
+            const totalStudents = students.length;
+            const totalMiddleStudents = students.filter(s => s.group === '중위권').length;
+            const totalFirstStudents = students.filter(s => s.group === '1순위').length;
+            const totalTeachingSessions = records.reduce((sum, r) => sum + r.studentIds.length, 0);
+
+            const filteredStudents = studentStats.filter(s => {
+                const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesGroup = selectedGroupFilter === '전체' ? true : s.group === selectedGroupFilter;
+                return matchesSearch && matchesGroup;
+            });
+
+            const chartData = studentStats.map(s => ({
+                name: s.name,
+                count: s.count,
+                그룹: s.group
+            }));
+
+            const currentSelectedStudent = studentStats.find(s => s.id === selectedStudentId) || (filteredStudents.length > 0 ? filteredStudents[0] : null);
+
+            return (
+                <div className="space-y-6 animate-fade-in" id="dashboard-container">
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                            <div className="p-3 bg-indigo-50 text-indigo-500 rounded-xl">
+                                <Icon name="Users" size={24} />
+                            </div>
+                            <div>
+                                <span className="text-xs text-slate-400 font-semibold block">총 관리 학생</span>
+                                <span className="text-xl font-black text-slate-800">{totalStudents}명</span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">중위권 {totalMiddleStudents} / 1순위 {totalFirstStudents}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                            <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl">
+                                <Icon name="Calendar" size={24} />
+                            </div>
+                            <div>
+                                <span className="text-xs text-slate-400 font-semibold block">누적 지도 횟수</span>
+                                <span className="text-xl font-black text-slate-800">{totalTeachingSessions}회</span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">총 {records.length}일 동안 진행됨</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                            <div className="p-3 bg-[#00B4D8]/10 text-[#00B4D8] rounded-xl">
+                                <Icon name="TrendingUp" size={24} />
+                            </div>
+                            <div>
+                                <span className="text-xs text-slate-400 font-semibold block">중위권 평균 진도율</span>
+                                <span className="text-xl font-black text-slate-800">
+                                    {totalMiddleStudents > 0 
+                                        ? Math.round(studentStats.filter(s => s.group === '중위권').reduce((acc, cur) => acc + cur.progress, 0) / totalMiddleStudents) 
+                                        : 0}%
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}회 기준</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                            <div className="p-3 bg-[#FF4D6D]/10 text-[#FF4D6D] rounded-xl">
+                                <Icon name="Award" size={24} />
+                            </div>
+                            <div>
+                                <span className="text-xs text-slate-400 font-semibold block">1순위 평균 진도율</span>
+                                <span className="text-xl font-black text-slate-800">
+                                    {totalFirstStudents > 0 
+                                        ? Math.round(studentStats.filter(s => s.group === '1순위').reduce((acc, cur) => acc + cur.progress, 0) / totalFirstStudents) 
+                                        : 0}%
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}회 기준</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chart */}
+                    {students.length > 0 && (
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center space-x-1.5">
+                                <Icon name="TrendingUp" size={16} className="text-[#727CF5]" />
+                                <span>학생별 누적 지도 횟수 비교</span>
+                            </h3>
+                            <SVGBarChart data={chartData} />
+                        </div>
+                    )}
+
+                    {/* Split View */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Target list */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm lg:col-span-5 flex flex-col space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-slate-800 flex items-center space-x-1.5">
+                                    <Icon name="Users" size={16} className="text-[#727CF5]" />
+                                    <span>지도 대상 리스트</span>
+                                </h3>
+                                <span className="text-[10px] text-slate-400 font-bold bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">
+                                    총 {filteredStudents.length}명
+                                </span>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="relative">
+                                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <Icon name="Search" size={15} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="이름으로 검색..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full text-xs bg-slate-50 border border-slate-100 focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none rounded-xl pl-9.5 pr-4 py-2.5 text-slate-700 font-medium"
+                                    />
+                                </div>
+
+                                <div className="flex space-x-1">
+                                    {['전체', '중위권', '1순위', '기타'].map(f => {
+                                        const isAct = selectedGroupFilter === f;
+                                        return (
+                                            <button
+                                                key={f}
+                                                onClick={() => setSelectedGroupFilter(f)}
+                                                className={`flex-1 py-1.5 text-[10px] sm:text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                                    isAct 
+                                                        ? 'bg-[#727CF5] text-white border-[#727CF5] shadow-xs' 
+                                                        : 'bg-white hover:bg-slate-50 text-slate-500 border-slate-100'
+                                                }`}
+                                            >
+                                                {f}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[400px] pr-1">
+                                {filteredStudents.length === 0 ? (
+                                    <p className="text-xs text-slate-400 italic text-center py-10">해당 조건의 학생이 없습니다.</p>
+                                ) : (
+                                    filteredStudents.map(student => {
+                                        const isSel = currentSelectedStudent?.id === student.id;
+                                        const dotColor = student.group === '1순위' 
+                                            ? 'bg-[#FF4D6D]' 
+                                            : student.group === '중위권' 
+                                            ? 'bg-[#00B4D8]' 
+                                            : 'bg-slate-400';
+
+                                        return (
+                                            <button
+                                                key={student.id}
+                                                onClick={() => setSelectedStudentId(student.id)}
+                                                className={`w-full text-left p-3.5 rounded-xl border flex items-center justify-between transition-all group cursor-pointer ${
+                                                    isSel 
+                                                        ? 'border-[#727CF5] bg-indigo-50/20 shadow-xs ring-1 ring-[#727CF5]/20' 
+                                                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/50'
+                                                }`}
+                                            >
+                                                <div className="space-y-1.5 flex-1 min-w-0 mr-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                                                        <span className="font-extrabold text-slate-800 text-sm">{student.name}</span>
+                                                        <span className="text-[9px] text-slate-400 font-medium">({student.group})</span>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1">
+                                                        <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                                                            <span>시수 달성율</span>
+                                                            <span>{student.count} / {student.maxLimit}회 ({student.progress}%)</span>
+                                                        </div>
+                                                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={`h-full rounded-full transition-all duration-300 ${
+                                                                    student.group === '1순위' ? 'bg-[#FF4D6D]' : student.group === '중위권' ? 'bg-[#00B4D8]' : 'bg-slate-400'
+                                                                }`}
+                                                                style={{ width: `${student.progress}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <Icon name="ArrowRight" size={14} className={`text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 ${isSel ? 'text-[#727CF5] translate-x-1' : ''}`} />
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* History and details */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm lg:col-span-7 flex flex-col space-y-4">
+                            {currentSelectedStudent ? (
+                                <>
+                                    <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-lg font-black text-slate-800">{currentSelectedStudent.name}</span>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                                                    currentSelectedStudent.group === '1순위' 
+                                                        ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
+                                                        : currentSelectedStudent.group === '중위권' 
+                                                        ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
+                                                        : 'bg-slate-50 text-slate-500 border-slate-100'
+                                                }`}>
+                                                    {currentSelectedStudent.group}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-1">개별 지도 히스토리 및 대기 메모</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xs text-slate-400 block font-semibold">총 지도 횟수</span>
+                                            <span className="text-lg font-black text-indigo-600 font-sans">{currentSelectedStudent.count}회</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto space-y-4 pr-1 max-h-[420px]">
+                                        <h4 className="text-xs font-bold text-slate-500 flex items-center space-x-1 mb-2">
+                                            <Icon name="BookOpen" size={14} />
+                                            <span>지도 내용 기록 타임라인</span>
+                                        </h4>
+
+                                        {currentSelectedStudent.history.length === 0 ? (
+                                            <div className="py-14 text-center">
+                                                <p className="text-xs text-slate-400 italic">아직 기록된 지도 내용이 없습니다.</p>
+                                                <p className="text-[10px] text-slate-400 mt-1">달력에서 날짜를 누르고 학생을 체크하면 실시간으로 여기에 누적됩니다.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 relative pl-4 border-l-2 border-indigo-50/60 ml-2">
+                                                {currentSelectedStudent.history.map((h, idx) => {
+                                                    const [year, month, day] = h.date.split('-');
+                                                    return (
+                                                        <div key={idx} className="relative space-y-1.5">
+                                                            <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#727CF5] ring-4 ring-white" />
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-black text-[#727CF5] font-sans">
+                                                                    {year}년 {month}월 {day}일
+                                                                </span>
+                                                            </div>
+                                                            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                                                <p className="text-xs text-slate-600 leading-relaxed font-medium whitespace-pre-wrap">
+                                                                    {h.note}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="py-24 text-center text-slate-400 text-sm italic">
+                                    대상을 선택하여 지도 히스토리를 확인하세요.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ----------------------------------------------------
+        // 8. MAIN APP COMPONENT
+        // ----------------------------------------------------
+        function App() {
+            const [students, setStudents] = useState([]);
+            const [records, setRecords] = useState([]);
+            const [selectedDate, setSelectedDate] = useState('');
+            const [maxHoursMiddle, setMaxHoursMiddle] = useState(20);
+            const [maxHoursFirst, setMaxHoursFirst] = useState(30);
+
+            const [activeTab, setActiveTab] = useState('calendar');
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [isSyncing, setIsSyncing] = useState(false);
+            const [isSupabaseEnabled, setIsSupabaseEnabled] = useState(false);
+            const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+
+            useEffect(() => {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                setSelectedDate(`${yyyy}-${mm}-${dd}`);
+            }, []);
+
+            useEffect(() => {
+                const creds = getSupabaseCredentials();
+                setIsSupabaseEnabled(creds.isValid);
+            }, []);
+
+            const loadAllData = async () => {
+                setIsSyncing(true);
+                try {
+                    const fetchedStudents = await fetchStudents();
+                    const fetchedRecords = await fetchRecords();
+                    const hoursMiddle = await fetchMaxHours('중위권');
+                    const hoursFirst = await fetchMaxHours('1순위');
+
+                    setStudents(fetchedStudents);
+                    setRecords(fetchedRecords);
+                    setMaxHoursMiddle(hoursMiddle);
+                    setMaxHoursFirst(hoursFirst);
+
+                    const creds = getSupabaseCredentials();
+                    setIsSupabaseEnabled(creds.isValid);
+                } catch (e) {
+                    console.error('Failed to load data:', e);
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
+
+            useEffect(() => {
+                loadAllData();
+            }, []);
+
+            const handleAddStudent = async (name, group) => {
+                const newStudent = {
+                    id: `student-${Date.now()}`,
+                    name,
+                    group,
+                    createdAt: new Date().toISOString()
+                };
+                
+                const updatedStudents = [...students, newStudent];
+                setStudents(updatedStudents);
+                await saveStudents(updatedStudents);
+            };
+
+            const handleDeleteStudent = async (studentId) => {
+                if (!window.confirm('정말 이 학생을 명단에서 삭제하시겠습니까? 관련 지도 이력은 달력에 유지되나 이름이 표시되지 않을 수 있습니다.')) return;
+                
+                const updatedStudents = students.filter(s => s.id !== studentId);
+                setStudents(updatedStudents);
+                await deleteStudentFromDb(studentId);
+                await saveStudents(updatedStudents);
+            };
+
+            const handleSaveMaxHours = async (group, hours) => {
+                if (group === '중위권') {
+                    setMaxHoursMiddle(hours);
+                } else {
+                    setMaxHoursFirst(hours);
+                }
+                await saveMaxHours(group, hours);
+            };
+
+            const handleSupabaseConfigChange = () => {
+                resetSupabaseClient();
+                const creds = getSupabaseCredentials();
+                setIsSupabaseEnabled(creds.isValid);
+                loadAllData();
+            };
+
+            const handleSaveRecord = async (updatedRecord) => {
+                const filteredRecords = records.filter(r => r.date !== updatedRecord.date);
+                
+                const hasAnyStudents = updatedRecord.studentIds.length > 0;
+                const hasAnyNotes = Object.values(updatedRecord.notes).some(note => note.trim().length > 0);
+                
+                if (hasAnyStudents || hasAnyNotes) {
+                    filteredRecords.push(updatedRecord);
+                }
+                setRecords(filteredRecords);
+                await saveRecord(updatedRecord);
+            };
+
+            const currentDayRecord = records.find(r => r.date === selectedDate);
+
+            return (
+                <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800" id="app-wrapper">
+                    {/* Header bar */}
+                    <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 shrink-0 shadow-xs z-10">
+                        <div className="flex items-center space-x-3">
+                            <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600">
+                                <Icon name="Calendar" size={20} className="stroke-[2.5]" />
+                            </div>
+                            <div>
+                                <h1 className="text-base font-black text-slate-900 tracking-tight leading-none">학급 기초학력 지도 달력</h1>
+                                <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase tracking-wider">Elementary Growth Calendar</p>
+                            </div>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex items-center space-x-4">
+                            <button
+                                onClick={loadAllData}
+                                disabled={isSyncing}
+                                className="p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-500 rounded-xl border border-slate-100 transition-colors cursor-pointer"
+                                title="실시간 새로고침 및 수동 동기화"
+                            >
+                                <Icon name="RefreshCw" size={16} className={isSyncing ? 'animate-spin text-[#727CF5]' : ''} />
+                            </button>
+
+                            <div className="bg-slate-100 p-1 rounded-xl flex space-x-1 border border-slate-200/30">
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('calendar');
+                                        setIsSettingsOpen(false);
+                                    }}
+                                    className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1.5 transition-all cursor-pointer ${
+                                        activeTab === 'calendar'
+                                            ? 'bg-white text-slate-900 shadow-sm'
+                                            : 'text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <Icon name="Calendar" size={13} />
+                                    <span>지도 달력</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('dashboard');
+                                        setIsSettingsOpen(false);
+                                    }}
+                                    className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1.5 transition-all cursor-pointer ${
+                                        activeTab === 'dashboard'
+                                            ? 'bg-white text-slate-900 shadow-sm'
+                                            : 'text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <Icon name="LayoutDashboard" size={13} />
+                                    <span>종합 대시보드</span>
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                                className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                                    isSettingsOpen 
+                                        ? 'bg-[#727CF5] border-[#727CF5] text-white' 
+                                        : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-500'
+                                }`}
+                                title="설정 및 학생 명단 관리"
+                            >
+                                <Icon name="Settings" size={16} />
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Supabase warning banner */}
+                    {!isSupabaseEnabled && (
+                        <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-2 flex items-center justify-between shrink-0">
+                            <div className="flex items-center space-x-2">
+                                <Icon name="CloudLightning" size={14} className="text-[#727CF5]" />
+                                <p className="text-[11px] text-indigo-950 font-bold leading-none">
+                                    현재 기기에만 저장되는 로컬 모드입니다. 다른 PC와 동기화하려면 우측 상단 ⚙️ 설정을 눌러 Supabase 클라우드를 연동하세요!
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="text-[10px] text-[#727CF5] font-black hover:underline leading-none cursor-pointer"
+                            >
+                                지금 연동하기 &rarr;
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Main workspace */}
+                    <div className="flex-1 flex overflow-hidden relative">
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="max-w-6xl mx-auto h-full">
+                                {activeTab === 'calendar' ? (
+                                    <div className="w-full space-y-4">
+                                        <Calendar
+                                            students={students}
+                                            records={records}
+                                            selectedDate={selectedDate}
+                                            onSelectDate={(date) => {
+                                                setSelectedDate(date);
+                                                setIsRecordModalOpen(true);
+                                            }}
+                                            maxHoursMiddle={maxHoursMiddle}
+                                            maxHoursFirst={maxHoursFirst}
+                                            isSupabaseEnabled={isSupabaseEnabled}
+                                            onOpenSettings={() => setIsSettingsOpen(true)}
+                                        />
+                                    </div>
+                                ) : (
+                                    <Dashboard
+                                        students={students}
+                                        records={records}
+                                        maxHoursMiddle={maxHoursMiddle}
+                                        maxHoursFirst={maxHoursFirst}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Settings slider overlay */}
+                        {isSettingsOpen && (
+                            <div className="absolute top-0 right-0 bottom-0 w-full sm:w-96 bg-white border-l border-slate-200 z-30 shadow-2xl animate-slide-in flex flex-col h-full">
+                                <SettingsPanel
+                                    students={students}
+                                    onAddStudent={handleAddStudent}
+                                    onDeleteStudent={handleDeleteStudent}
+                                    maxHoursMiddle={maxHoursMiddle}
+                                    maxHoursFirst={maxHoursFirst}
+                                    onSaveMaxHours={handleSaveMaxHours}
+                                    onClose={() => setIsSettingsOpen(false)}
+                                    onSupabaseConfigChange={handleSupabaseConfigChange}
+                                />
+                            </div>
+                        )}
+
+                        {/* 중앙 지도 기록 모달 팝업 */}
+                        {isRecordModalOpen && selectedDate && (
+                            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" id="record-modal-backdrop">
+                                <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in" id="record-modal-content">
+                                    <TeachingRecordPanel
+                                        selectedDate={selectedDate}
+                                        students={students}
+                                        record={currentDayRecord}
+                                        onSaveRecord={handleSaveRecord}
+                                        onClose={() => setIsRecordModalOpen(false)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

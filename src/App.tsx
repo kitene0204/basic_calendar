@@ -40,6 +40,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isSupabaseEnabled, setIsSupabaseEnabled] = useState<boolean>(false);
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState<boolean>(false);
 
   // 오늘 날짜 기본 지정 (YYYY-MM-DD)
   useEffect(() => {
@@ -245,47 +246,20 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-6xl mx-auto h-full">
             {activeTab === 'calendar' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                
-                {/* 1. 달력 카드 영역 (8/12 cols) */}
-                <div className="lg:col-span-8 space-y-4">
-                  <Calendar
-                    students={students}
-                    records={records}
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    maxHoursMiddle={maxHoursMiddle}
-                    maxHoursFirst={maxHoursFirst}
-                    isSupabaseEnabled={isSupabaseEnabled}
-                    onOpenSettings={() => setIsSettingsOpen(true)}
-                  />
-                </div>
-
-                {/* 2. 우측 지도 입력 패널 (4/12 cols) */}
-                <div className="lg:col-span-4 h-[630px]">
-                  {selectedDate ? (
-                    <TeachingRecordPanel
-                      selectedDate={selectedDate}
-                      students={students}
-                      record={currentDayRecord}
-                      onSaveRecord={handleSaveRecord}
-                      onClose={() => {
-                        // 오늘 날짜로 재설정하거나 닫기 액션
-                        const today = new Date();
-                        const yyyy = today.getFullYear();
-                        const mm = String(today.getMonth() + 1).padStart(2, '0');
-                        const dd = String(today.getDate()).padStart(2, '0');
-                        setSelectedDate(`${yyyy}-${mm}-${dd}`);
-                      }}
-                    />
-                  ) : (
-                    <div className="h-full bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center p-6 text-slate-400 shadow-sm">
-                      <CalendarIcon size={32} className="mb-2 text-slate-300" />
-                      <p className="text-xs font-semibold">달력에서 날짜를 클릭하면 그날 지도한 학생을 여기에 기록할 수 있습니다.</p>
-                    </div>
-                  )}
-                </div>
-
+              <div className="w-full space-y-4">
+                <Calendar
+                  students={students}
+                  records={records}
+                  selectedDate={selectedDate}
+                  onSelectDate={(date) => {
+                    setSelectedDate(date);
+                    setIsRecordModalOpen(true);
+                  }}
+                  maxHoursMiddle={maxHoursMiddle}
+                  maxHoursFirst={maxHoursFirst}
+                  isSupabaseEnabled={isSupabaseEnabled}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                />
               </div>
             ) : (
               // 종합 대시보드 뷰
@@ -312,6 +286,21 @@ export default function App() {
               onClose={() => setIsSettingsOpen(false)}
               onSupabaseConfigChange={handleSupabaseConfigChange}
             />
+          </div>
+        )}
+
+        {/* 중앙 지도 기록 모달 팝업 */}
+        {isRecordModalOpen && selectedDate && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" id="record-modal-backdrop">
+            <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in" id="record-modal-content">
+              <TeachingRecordPanel
+                selectedDate={selectedDate}
+                students={students}
+                record={currentDayRecord}
+                onSaveRecord={handleSaveRecord}
+                onClose={() => setIsRecordModalOpen(false)}
+              />
+            </div>
           </div>
         )}
 

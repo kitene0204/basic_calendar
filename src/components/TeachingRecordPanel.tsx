@@ -83,7 +83,7 @@ export default function TeachingRecordPanel({
         <button
           onClick={onClose}
           className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition-colors"
-          title="닫기"
+          title="저장 및 닫기"
           id="btn-close-panel"
         >
           <X size={20} />
@@ -206,7 +206,7 @@ export default function TeachingRecordPanel({
                 const tagColor = student.group === '1순위' 
                   ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
                   : student.group === '중위권' 
-                  ? 'bg-amber-50 text-[#B07A00] border-amber-100' 
+                  ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
                   : 'bg-slate-50 text-slate-500 border-slate-100';
 
                 return (
@@ -238,7 +238,7 @@ export default function TeachingRecordPanel({
           className="w-full py-3.5 bg-[#2E3243] hover:bg-[#1E212E] active:bg-[#151720] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg text-center"
           id="btn-confirm-panel"
         >
-          닫기
+          저장 및 닫기
         </button>
       </div>
     </div>

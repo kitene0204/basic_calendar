@@ -70,21 +70,25 @@ export default function Calendar({
   const middleStudents = students.filter(s => s.group === '중위권');
   const firstStudents = students.filter(s => s.group === '1순위');
 
-  // 누적 지도 횟수 계산 (전체 기록 중 해당 그룹 학생이 포함된 건수의 합)
+  // 누적 지도 횟수 계산 (하루에 같은 그룹 여러 명을 지도하더라도 해당 일자는 1회로 산출)
   let middleTeachingCount = 0;
   let firstTeachingCount = 0;
 
   records.forEach(record => {
+    let hasMiddle = false;
+    let hasFirst = false;
     record.studentIds.forEach(sid => {
       const student = students.find(s => s.id === sid);
       if (student) {
         if (student.group === '중위권') {
-          middleTeachingCount++;
+          hasMiddle = true;
         } else if (student.group === '1순위') {
-          firstTeachingCount++;
+          hasFirst = true;
         }
       }
     });
+    if (hasMiddle) middleTeachingCount++;
+    if (hasFirst) firstTeachingCount++;
   });
 
   const middleRemaining = Math.max(0, maxHoursMiddle - middleTeachingCount);
@@ -251,7 +255,7 @@ export default function Calendar({
                     const badgeColor = s.group === '1순위' 
                       ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
                       : s.group === '중위권' 
-                      ? 'bg-amber-50/80 text-[#B07A00] border-amber-100' 
+                      ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
                       : 'bg-slate-50 text-slate-500 border-slate-100';
 
                     return (

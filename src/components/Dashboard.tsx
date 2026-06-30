@@ -279,7 +279,7 @@ export default function Dashboard({
                       currentSelectedStudent.group === '1순위' 
                         ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
                         : currentSelectedStudent.group === '중위권' 
-                        ? 'bg-amber-50 text-[#B07A00] border-amber-100' 
+                        ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
                         : 'bg-slate-50 text-slate-500 border-slate-100'
                     }`}>
                       {currentSelectedStudent.group}

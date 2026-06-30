@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Trash2, Cloud, HelpCircle, Save, Database, AlertCircle, Copy, Check } from 'lucide-react';
+import { X, UserPlus, Trash2, Cloud, HelpCircle, Save, Database, AlertCircle, Copy, Check, Download } from 'lucide-react';
 import { Student } from '../types';
 import { getSupabaseCredentials, SUPABASE_SQL_SETUP } from '../lib/supabase';
 
@@ -135,6 +135,57 @@ export default function SettingsPanel({
 
       {/* 패널 본문 */}
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        
+        {/* 0. 단독 실행형 HTML 다운로드 */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
+            <span className="w-1.5 h-4 bg-[#727CF5] rounded-full inline-block" />
+            <span>단독 실행형 HTML 다운로드</span>
+          </h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            인터넷 연결이 필요 없는 단일 파일(.html) 프로그램입니다. 교실 PC나 오프라인 환경에서 더블 클릭만으로 온전히 동작하며, 기기 내에 데이터가 안전하게 보관됩니다.
+          </p>
+          <div className="space-y-2.5">
+            <a
+              href="/Calendar.html"
+              download="학급_기초학력_지도_달력.html"
+              className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/60 rounded-xl transition-all group"
+            >
+              <div className="flex items-center space-x-3 overflow-hidden">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100/50 transition-colors shrink-0">
+                  <Download size={15} />
+                </div>
+                <div className="text-left truncate">
+                  <h4 className="text-xs font-bold text-slate-800">1. 기초학력 지도 달력</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">달력식 이력 관리 & 남은 시수 자동 산출</p>
+                </div>
+              </div>
+              <span className="text-[10px] shrink-0 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-500 font-extrabold group-hover:border-indigo-200 group-hover:text-[#727CF5] transition-all">
+                다운로드
+              </span>
+            </a>
+
+            <a
+              href="/EduDraft.html"
+              download="K_에듀파인_품의_엑셀_변환기.html"
+              className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/60 rounded-xl transition-all group"
+            >
+              <div className="flex items-center space-x-3 overflow-hidden">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-100/50 transition-colors shrink-0">
+                  <Download size={15} />
+                </div>
+                <div className="text-left truncate">
+                  <h4 className="text-xs font-bold text-slate-800">2. 품의 초안 엑셀 변환기</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">줄글 품의 내용을 에듀파인 업로드용 엑셀로</p>
+                </div>
+              </div>
+              <span className="text-[10px] shrink-0 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-500 font-extrabold group-hover:border-emerald-200 group-hover:text-emerald-600 transition-all">
+                다운로드
+              </span>
+            </a>
+          </div>
+          <div className="h-px bg-slate-100/80 w-full pt-2" />
+        </section>
         
         {/* 1. 최대 지도 시수 설정 */}
         <section className="space-y-4">
