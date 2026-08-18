@@ -20,23 +20,26 @@ export default function Dashboard({
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<'전체' | '중위권' | '1순위' | '기타'>('전체');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  // 1. 학생별 누적 지도 통계 계산
+  // 1. 학생별 누적 지도 통계 계산 (차시/시간 합산)
   const studentStats = students.map(student => {
-    // 해당 학생이 포함된 기록 수 계산
+    // 해당 학생이 포함된 기록 수 및 누적 시수(시간) 계산
     const tutoredRecords = records.filter(r => r.studentIds.includes(student.id))
       .sort((a, b) => b.date.localeCompare(a.date)); // 최근 순 정렬
 
     const count = tutoredRecords.length;
+    const totalHours = tutoredRecords.reduce((sum, r) => sum + (r.hours?.[student.id] ?? 1), 0);
     const maxLimit = student.group === '중위권' ? maxHoursMiddle : student.group === '1순위' ? maxHoursFirst : 10;
-    const progress = Math.min(100, Math.round((count / maxLimit) * 100));
+    const progress = Math.min(100, Math.round((totalHours / maxLimit) * 100));
 
     return {
       ...student,
       count,
+      totalHours,
       maxLimit,
       progress,
       history: tutoredRecords.map(r => ({
         date: r.date,
+        hours: r.hours?.[student.id] ?? 1,
         note: r.notes[student.id] || '지도 기록 내용이 없습니다.'
       }))
     };
@@ -47,8 +50,10 @@ export default function Dashboard({
   const totalMiddleStudents = students.filter(s => s.group === '중위권').length;
   const totalFirstStudents = students.filter(s => s.group === '1순위').length;
   
-  // 총 누적 지도 세션 횟수 (모든 일자의 모든 지도 학생 수의 총합)
-  const totalTeachingSessions = records.reduce((sum, r) => sum + r.studentIds.length, 0);
+  // 총 누적 지도 시수 (모든 학생이 이수한 총 수업 시간의 합)
+  const totalTeachingHours = records.reduce((sum, r) => {
+    return sum + r.studentIds.reduce((subSum, sid) => subSum + (r.hours?.[sid] ?? 1), 0);
+  }, 0);
 
   // 3. 필터링된 학생 리스트
   const filteredStudents = studentStats.filter(s => {
@@ -57,10 +62,10 @@ export default function Dashboard({
     return matchesSearch && matchesGroup;
   });
 
-  // 4. Recharts용 데이터 구성 (차트용: 학생 이름별 지도 횟수)
+  // 4. Recharts용 데이터 구성 (차트용: 학생 이름별 누적 지도 시수)
   const chartData = studentStats.map(s => ({
     name: s.name,
-    지도횟수: s.count,
+    지도시간: s.totalHours,
     그룹: s.group
   }));
 
@@ -84,15 +89,15 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* 누적 지도 세션 */}
+        {/* 누적 지도 시수 */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl">
             <Calendar size={24} />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-semibold block">누적 지도 횟수</span>
-            <span className="text-xl font-black text-slate-800">{totalTeachingSessions}회</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">총 {records.length}일 동안 진행됨</span>
+            <span className="text-xs text-slate-400 font-semibold block">누적 지도 시수</span>
+            <span className="text-xl font-black text-slate-800">{totalTeachingHours}시간</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">총 {records.length}일간 진행됨</span>
           </div>
         </div>
 
@@ -108,7 +113,7 @@ export default function Dashboard({
                 ? Math.round(studentStats.filter(s => s.group === '중위권').reduce((acc, cur) => acc + cur.progress, 0) / totalMiddleStudents) 
                 : 0}%
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}회 기준</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}시간 기준</span>
           </div>
         </div>
 
@@ -124,7 +129,7 @@ export default function Dashboard({
                 ? Math.round(studentStats.filter(s => s.group === '1순위').reduce((acc, cur) => acc + cur.progress, 0) / totalFirstStudents) 
                 : 0}%
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}회 기준</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}시간 기준</span>
           </div>
         </div>
       </div>
@@ -134,18 +139,19 @@ export default function Dashboard({
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center space-x-1.5">
             <TrendingUp size={16} className="text-[#727CF5]" />
-            <span>학생별 누적 지도 횟수 비교</span>
+            <span>학생별 누적 지도 시수(시간) 비교</span>
           </h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                 <XAxis dataKey="name" tick={{ fill: '#64748B', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} />
+                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} unit="h" />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1E293B', borderRadius: '8px', border: 'none', color: '#FFF' }}
                   labelStyle={{ fontWeight: 'bold' }}
+                  formatter={(val: any) => [`${val}시간`, '누적 시수']}
                 />
-                <Bar dataKey="지도횟수" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="지도시간" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => {
                     const barColor = entry.그룹 === '1순위' 
                       ? '#FF4D6D' 
@@ -196,7 +202,7 @@ export default function Dashboard({
                   <button
                     key={f}
                     onClick={() => setSelectedGroupFilter(f)}
-                    className={`flex-1 py-1.5 text-[10px] sm:text-xs font-bold rounded-lg border transition-all ${
+                    className={`flex-1 py-1.5 text-[10px] sm:text-xs font-bold rounded-lg border transition-all cursor-pointer ${
                       isAct 
                         ? 'bg-[#727CF5] text-white border-[#727CF5] shadow-xs' 
                         : 'bg-white hover:bg-slate-50 text-slate-500 border-slate-100'
@@ -226,7 +232,7 @@ export default function Dashboard({
                   <button
                     key={student.id}
                     onClick={() => setSelectedStudentId(student.id)}
-                    className={`w-full text-left p-3.5 rounded-xl border flex items-center justify-between transition-all group ${
+                    className={`w-full text-left p-3.5 rounded-xl border flex items-center justify-between transition-all group cursor-pointer ${
                       isSel 
                         ? 'border-[#727CF5] bg-indigo-50/20 shadow-xs ring-1 ring-[#727CF5]/20' 
                         : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/50'
@@ -241,9 +247,9 @@ export default function Dashboard({
                       
                       {/* 프로그레스 바 */}
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                          <span>시수 달성율</span>
-                          <span>{student.count} / {student.maxLimit}회 ({student.progress}%)</span>
+                        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                          <span>시수 달성</span>
+                          <span className="font-bold text-slate-700">{student.totalHours} / {student.maxLimit}시간 ({student.progress}%)</span>
                         </div>
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div 
@@ -288,8 +294,11 @@ export default function Dashboard({
                   <p className="text-xs text-slate-400 mt-1">개별 지도 히스토리 및 대기 메모</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs text-slate-400 block font-semibold">총 지도 횟수</span>
-                  <span className="text-lg font-black text-indigo-600 font-sans">{currentSelectedStudent.count}회</span>
+                  <span className="text-xs text-slate-400 block font-semibold">총 지도 시수</span>
+                  <span className="text-lg font-black text-indigo-600 font-sans">
+                    {currentSelectedStudent.totalHours}시간
+                    <span className="text-xs text-slate-400 font-normal ml-1">({currentSelectedStudent.count}일)</span>
+                  </span>
                 </div>
               </div>
 
@@ -317,6 +326,9 @@ export default function Dashboard({
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-[#727CF5] font-sans">
                               {year}년 {month}월 {day}일
+                            </span>
+                            <span className="text-[10px] font-black bg-indigo-50 text-[#727CF5] px-2 py-0.5 rounded-md border border-indigo-100">
+                              {h.hours}시간(차시) 지도
                             </span>
                           </div>
                           

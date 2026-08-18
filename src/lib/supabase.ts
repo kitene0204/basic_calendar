@@ -69,13 +69,17 @@ CREATE TABLE IF NOT EXISTS students (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. 지도 기록(records) 테이블 생성
+-- 2. 지도 기록(records) 테이블 생성 (hours 시수 컬럼 지원)
 CREATE TABLE IF NOT EXISTS records (
   date TEXT PRIMARY KEY, -- YYYY-MM-DD
   student_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+  hours JSONB NOT NULL DEFAULT '{}'::jsonb,
   notes JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- 기존 테이블에 hours 컬럼이 없는 경우를 위한 마이그레이션 구문
+ALTER TABLE records ADD COLUMN IF NOT EXISTS hours JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- 3. 설정(settings) 테이블 생성
 CREATE TABLE IF NOT EXISTS settings (
@@ -145,8 +149,6 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
   const client = getSupabaseClient();
   if (client) {
     try {
-      // 간편하게 기존 데이터 삭제 후 일괄 인서트 혹은 개별 업서트
-      // Supabase id가 일치하므로 upsert가 안전
       const upsertData = students.map(s => ({
         id: s.id,
         name: s.name,
@@ -154,8 +156,6 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
         created_at: s.createdAt
       }));
 
-      // 먼저 전체 동기화를 위해 기존 Supabase 테이블에 있는데 로컬에 없는 학생을 삭제 (선택적)
-      // 여기서는 upsert 진행
       const { error } = await client
         .from('students')
         .upsert(upsertData, { onConflict: 'id' });
@@ -208,6 +208,7 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
           id: item.date, // date를 id로도 취급
           date: item.date,
           studentIds: Array.isArray(item.student_ids) ? item.student_ids : JSON.parse(item.student_ids || '[]'),
+          hours: typeof item.hours === 'object' && item.hours !== null ? item.hours : (typeof item.hours === 'string' && item.hours ? JSON.parse(item.hours) : {}),
           notes: typeof item.notes === 'object' && item.notes !== null ? item.notes : JSON.parse(item.notes || '{}'),
           updatedAt: item.updated_at
         }));
@@ -247,6 +248,7 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
         .upsert({
           date: record.date,
           student_ids: record.studentIds,
+          hours: record.hours || {},
           notes: record.notes,
           updated_at: new Date().toISOString()
         }, { onConflict: 'date' });

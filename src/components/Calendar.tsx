@@ -70,29 +70,33 @@ export default function Calendar({
   const middleStudents = students.filter(s => s.group === '중위권');
   const firstStudents = students.filter(s => s.group === '1순위');
 
-  // 누적 지도 횟수 계산 (하루에 같은 그룹 여러 명을 지도하더라도 해당 일자는 1회로 산출)
-  let middleTeachingCount = 0;
-  let firstTeachingCount = 0;
+  // 누적 지도 시수(시간) 계산
+  // 날짜별로 중위권 학생 지도 시간 중 최대 시간(동시간 수업) 및 1순위 학생 지도 시간 중 최대 시간을 일자별 합산
+  let middleTeachingHours = 0;
+  let firstTeachingHours = 0;
 
   records.forEach(record => {
-    let hasMiddle = false;
-    let hasFirst = false;
+    let dayMiddleHours = 0;
+    let dayFirstHours = 0;
+
     record.studentIds.forEach(sid => {
       const student = students.find(s => s.id === sid);
+      const hours = record.hours?.[sid] ?? 1;
       if (student) {
         if (student.group === '중위권') {
-          hasMiddle = true;
+          dayMiddleHours = Math.max(dayMiddleHours, hours);
         } else if (student.group === '1순위') {
-          hasFirst = true;
+          dayFirstHours = Math.max(dayFirstHours, hours);
         }
       }
     });
-    if (hasMiddle) middleTeachingCount++;
-    if (hasFirst) firstTeachingCount++;
+
+    middleTeachingHours += dayMiddleHours;
+    firstTeachingHours += dayFirstHours;
   });
 
-  const middleRemaining = Math.max(0, maxHoursMiddle - middleTeachingCount);
-  const firstRemaining = Math.max(0, maxHoursFirst - firstTeachingCount);
+  const middleRemaining = Math.max(0, maxHoursMiddle - middleTeachingHours);
+  const firstRemaining = Math.max(0, maxHoursFirst - firstTeachingHours);
 
   // 요일 헤더
   const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -120,7 +124,7 @@ export default function Calendar({
           
           <button 
             onClick={onOpenSettings}
-            className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
+            className="p-1.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
             title="설정창 열기"
             id="btn-settings"
           >
@@ -132,7 +136,7 @@ export default function Calendar({
         <div className="flex items-center justify-end space-x-4">
           <button
             onClick={prevMonth}
-            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
             title="이전 달"
             id="btn-prev-month"
           >
@@ -145,7 +149,7 @@ export default function Calendar({
 
           <button
             onClick={nextMonth}
-            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
             title="다음 달"
             id="btn-next-month"
           >
@@ -161,12 +165,14 @@ export default function Calendar({
           <div className="flex items-center space-x-2">
             <span className="w-3 h-3 rounded-full bg-[#00B4D8]" />
             <span className="font-bold text-slate-800 text-sm sm:text-base">중위권</span>
-            <span className="text-xs text-slate-400">지도 {middleTeachingCount}회</span>
+            <span className="text-xs text-slate-500 font-semibold bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100">
+              진행 {middleTeachingHours}시간
+            </span>
           </div>
           <div className="text-right">
             <span className="text-xs text-slate-400 block sm:inline mr-2">남은 시수:</span>
-            <span className="font-extrabold text-[#00B4D8] text-base sm:text-lg">{middleRemaining}</span>
-            <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursMiddle}</span>
+            <span className="font-extrabold text-[#00B4D8] text-base sm:text-lg">{middleRemaining}시간</span>
+            <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursMiddle}시간</span>
           </div>
         </div>
 
@@ -175,12 +181,14 @@ export default function Calendar({
           <div className="flex items-center space-x-2">
             <span className="w-3 h-3 rounded-full bg-[#FF4D6D]" />
             <span className="font-bold text-slate-800 text-sm sm:text-base">1순위</span>
-            <span className="text-xs text-slate-400">지도 {firstTeachingCount}회</span>
+            <span className="text-xs text-slate-500 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+              진행 {firstTeachingHours}시간
+            </span>
           </div>
           <div className="text-right">
             <span className="text-xs text-slate-400 block sm:inline mr-2">남은 시수:</span>
-            <span className="font-extrabold text-[#FF4D6D] text-base sm:text-lg">{firstRemaining}</span>
-            <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursFirst}</span>
+            <span className="font-extrabold text-[#FF4D6D] text-base sm:text-lg">{firstRemaining}시간</span>
+            <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursFirst}시간</span>
           </div>
         </div>
       </div>
@@ -223,7 +231,7 @@ export default function Calendar({
               <button
                 key={`day-${day}`}
                 onClick={() => onSelectDate(dateStr)}
-                className={`aspect-square p-2 rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group ${
+                className={`aspect-square p-2 rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group cursor-pointer ${
                   isSelected
                     ? 'border-indigo-600 bg-indigo-50/40 ring-3 ring-indigo-500/10 scale-[1.02]'
                     : isToday
@@ -247,11 +255,12 @@ export default function Calendar({
                 </div>
 
                 {/* 그 날의 지도 학생 요약 */}
-                <div className="w-full mt-1.5 overflow-hidden flex flex-col gap-0.5 pointer-events-none">
+                <div className="w-full mt-1.5 overflow-hidden flex flex-col gap-1 pointer-events-none">
                   {record && record.studentIds.map(sid => {
                     const s = students.find(x => x.id === sid);
                     if (!s) return null;
                     
+                    const hours = record.hours?.[sid] ?? 1;
                     const badgeColor = s.group === '1순위' 
                       ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
                       : s.group === '중위권' 
@@ -261,9 +270,12 @@ export default function Calendar({
                     return (
                       <span 
                         key={sid} 
-                        className={`text-[11px] sm:text-[12.5px] px-1.5 py-0.5 rounded border leading-none truncate font-extrabold ${badgeColor}`}
+                        className={`text-[11px] sm:text-[12px] px-1.5 py-0.5 rounded border leading-none truncate font-extrabold flex items-center justify-between gap-1 ${badgeColor}`}
                       >
-                        {s.name}
+                        <span className="truncate">{s.name}</span>
+                        {hours > 1 && (
+                          <span className="text-[10px] opacity-90 shrink-0 font-black">({hours}h)</span>
+                        )}
                       </span>
                     );
                   })}

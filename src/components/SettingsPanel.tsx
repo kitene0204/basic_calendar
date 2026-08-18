@@ -191,7 +191,7 @@ export default function SettingsPanel({
         <section className="space-y-4">
           <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
             <span className="w-1.5 h-4 bg-[#727CF5] rounded-full inline-block" />
-            <span>최대 지도 시수 설정</span>
+            <span>최대 지도 시수(시간) 설정</span>
           </h3>
           <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div>
@@ -203,7 +203,7 @@ export default function SettingsPanel({
                   onChange={(e) => setInputMiddleHours(Math.max(1, parseInt(e.target.value, 10) || 0))}
                   className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
-                <span className="text-xs text-slate-400 font-medium">회</span>
+                <span className="text-xs text-slate-500 font-bold">시간</span>
               </div>
             </div>
 
@@ -216,7 +216,7 @@ export default function SettingsPanel({
                   onChange={(e) => setInputFirstHours(Math.max(1, parseInt(e.target.value, 10) || 0))}
                   className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
-                <span className="text-xs text-slate-400 font-medium">회</span>
+                <span className="text-xs text-slate-500 font-bold">시간</span>
               </div>
             </div>
           </div>
