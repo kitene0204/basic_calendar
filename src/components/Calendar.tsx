@@ -165,15 +165,15 @@ export default function Calendar({
         <div className="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#00B4D8] shrink-0" />
-            <span className="font-bold text-slate-800 text-xs sm:text-base">중위권</span>
+            <span className="font-black text-slate-800 text-xs sm:text-base">중위권</span>
             <span className="text-[10px] sm:text-xs text-slate-500 font-bold bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100">
-              {middleTeachingHours}h
+              진행 {middleTeachingHours}차시
             </span>
           </div>
           <div className="text-left sm:text-right">
-            <span className="text-[10px] sm:text-xs text-slate-400 block sm:inline mr-1">잔여:</span>
-            <span className="font-extrabold text-[#00B4D8] text-sm sm:text-lg">{middleRemaining}시간</span>
-            <span className="text-slate-400 text-xs sm:text-base"> / {maxHoursMiddle}h</span>
+            <span className="text-[10px] sm:text-xs text-slate-400 block sm:inline mr-1">남은 차시:</span>
+            <span className="font-extrabold text-[#00B4D8] text-sm sm:text-lg">{middleRemaining}차시</span>
+            <span className="text-slate-400 text-xs sm:text-base"> / {maxHoursMiddle}차시</span>
           </div>
         </div>
 
@@ -181,15 +181,15 @@ export default function Calendar({
         <div className="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
           <div className="flex items-center space-x-1.5 sm:space-x-2">
             <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF4D6D] shrink-0" />
-            <span className="font-bold text-slate-800 text-xs sm:text-base">1순위</span>
+            <span className="font-black text-slate-800 text-xs sm:text-base">1순위</span>
             <span className="text-[10px] sm:text-xs text-slate-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
-              {firstTeachingHours}h
+              진행 {firstTeachingHours}차시
             </span>
           </div>
           <div className="text-left sm:text-right">
-            <span className="text-[10px] sm:text-xs text-slate-400 block sm:inline mr-1">잔여:</span>
-            <span className="font-extrabold text-[#FF4D6D] text-sm sm:text-lg">{firstRemaining}시간</span>
-            <span className="text-slate-400 text-xs sm:text-base"> / {maxHoursFirst}h</span>
+            <span className="text-[10px] sm:text-xs text-slate-400 block sm:inline mr-1">남은 차시:</span>
+            <span className="font-extrabold text-[#FF4D6D] text-sm sm:text-lg">{firstRemaining}차시</span>
+            <span className="text-slate-400 text-xs sm:text-base"> / {maxHoursFirst}차시</span>
           </div>
         </div>
       </div>

@@ -51,170 +51,210 @@ const STORAGE_KEYS = {
 };
 
 // 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
-export const CURRENT_DATA_VERSION = '2026-08-28-v13-middle-5h-first-13h';
+export const CURRENT_DATA_VERSION = '2026-08-28-v15-exact-middle-and-first-logs';
 
-// 초기 기본 학생 명단 (최신 8, 9월 데이터 반영)
+// 초기 기본 학생 명단 (실제 운영 일지 기준 100% 일치)
 export const INITIAL_STUDENTS: Student[] = [
   { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
+  { id: 'student-6', name: '이정', group: '중위권', createdAt: new Date().toISOString() },
+  { id: 'student-5', name: '엄호준', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() },
-  { id: 'student-4', name: '강주연', group: '1순위', createdAt: new Date().toISOString() },
-  { id: 'student-5', name: '엄호준', group: '1순위', createdAt: new Date().toISOString() }
+  { id: 'student-4', name: '강주연', group: '1순위', createdAt: new Date().toISOString() }
 ];
 
-// 초기 기본 지도 기록 (누적 시수 중위권 35시간[남은시수 5시간], 1순위 27시간[남은시수 13시간] 완벽 반영)
+// 초기 기본 지도 기록 (중위권 35차시[남은 5차시], 1순위 27차시[남은 13차시] 실제 일지 100% 일치 반영)
 export const INITIAL_RECORDS: TeachingRecord[] = [
-  // 1학기/7월 누적 시수 (중위권 10시간, 1순위 10시간)
+  // ================= 5월 (1순위 4차시) =================
   {
-    id: '2026-07-07',
-    date: '2026-07-07',
-    studentIds: ['student-1', 'student-2'],
-    hours: { 'student-1': 2, 'student-2': 2 },
-    notes: { 'student-1': '1학기 기초 문해력 지도', 'student-2': '1학기 기초 문해력 지도' }
+    id: '2026-05-06',
+    date: '2026-05-06',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)' }
   },
   {
-    id: '2026-07-08',
-    date: '2026-07-08',
+    id: '2026-05-11',
+    date: '2026-05-11',
+    studentIds: ['student-4'],
+    hours: { 'student-4': 1 },
+    notes: { 'student-4': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
+  },
+  {
+    id: '2026-05-13',
+    date: '2026-05-13',
     studentIds: ['student-3'],
-    hours: { 'student-3': 3 },
-    notes: { 'student-3': '1순위 맞춤형 개별 집중 지도' }
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)' }
+  },
+  {
+    id: '2026-05-20',
+    date: '2026-05-20',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)' }
+  },
+
+  // ================= 6월 (1순위 5차시 + 중위권 3차시) =================
+  {
+    id: '2026-06-01',
+    date: '2026-06-01',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
+  },
+  {
+    id: '2026-06-05',
+    date: '2026-06-05',
+    studentIds: ['student-3', 'student-4'],
+    hours: { 'student-3': 1, 'student-4': 1 },
+    notes: { 'student-3': '1순위 지도 (14:40~15:30, 1차시)', 'student-4': '1순위 지도 (14:40~15:30, 1차시)' }
+  },
+  {
+    id: '2026-06-08',
+    date: '2026-06-08',
+    studentIds: ['student-2', 'student-6'],
+    hours: { 'student-2': 1, 'student-6': 1 },
+    notes: { 'student-2': '중위권 맞춤형 지도 (14:40~15:20, 1차시)', 'student-6': '중위권 맞춤형 지도 (14:40~15:20, 1차시)' }
+  },
+  {
+    id: '2026-06-10',
+    date: '2026-06-10',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)' }
+  },
+  {
+    id: '2026-06-12',
+    date: '2026-06-12',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
+  },
+  {
+    id: '2026-06-15',
+    date: '2026-06-15',
+    studentIds: ['student-2', 'student-6'],
+    hours: { 'student-2': 1, 'student-6': 1 },
+    notes: { 'student-2': '중위권 맞춤형 지도 (14:40~15:20, 1차시)', 'student-6': '중위권 맞춤형 지도 (14:40~15:20, 1차시)' }
+  },
+  {
+    id: '2026-06-18',
+    date: '2026-06-18',
+    studentIds: ['student-2', 'student-6'],
+    hours: { 'student-2': 1, 'student-6': 1 },
+    notes: { 'student-2': '중위권 맞춤형 지도 (14:40~15:20, 1차시)', 'student-6': '중위권 맞춤형 지도 (14:40~15:20, 1차시)' }
+  },
+  {
+    id: '2026-06-19',
+    date: '2026-06-19',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
+  },
+
+  // ================= 7월 (1순위 2차시 + 중위권 4차시) =================
+  {
+    id: '2026-07-03',
+    date: '2026-07-03',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
   },
   {
     id: '2026-07-14',
     date: '2026-07-14',
-    studentIds: ['student-1', 'student-2'],
-    hours: { 'student-1': 2, 'student-2': 2 },
-    notes: { 'student-1': '기초 연산 덧셈 뺄셈', 'student-2': '기초 연산 덧셈 뺄셈' }
-  },
-  {
-    id: '2026-07-15',
-    date: '2026-07-15',
-    studentIds: ['student-3'],
-    hours: { 'student-3': 3 },
-    notes: { 'student-3': '어휘 및 문장 읽기 지도' }
-  },
-  {
-    id: '2026-07-21',
-    date: '2026-07-21',
-    studentIds: ['student-1', 'student-2'],
-    hours: { 'student-1': 2, 'student-2': 2 },
-    notes: { 'student-1': '문해력 독해 기초', 'student-2': '문해력 독해 기초' }
-  },
-  {
-    id: '2026-07-22',
-    date: '2026-07-22',
-    studentIds: ['student-3'],
-    hours: { 'student-3': 3 },
-    notes: { 'student-3': '수학 곱셈구구 기초' }
-  },
-  {
-    id: '2026-07-28',
-    date: '2026-07-28',
-    studentIds: ['student-1', 'student-2'],
-    hours: { 'student-1': 2, 'student-2': 2 },
-    notes: { 'student-1': '여름방학 전 학습 정리', 'student-2': '여름방학 전 학습 정리' }
-  },
-  {
-    id: '2026-07-29',
-    date: '2026-07-29',
     studentIds: ['student-4'],
     hours: { 'student-4': 1 },
-    notes: { 'student-4': '기초학력 개별 보충 지도' }
+    notes: { 'student-4': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
   },
   {
-    id: '2026-07-30',
-    date: '2026-07-30',
-    studentIds: ['student-1', 'student-2'],
-    hours: { 'student-1': 2, 'student-2': 2 },
-    notes: { 'student-1': '1학기 최종 보충', 'student-2': '1학기 최종 보충' }
+    id: '2026-07-31',
+    date: '2026-07-31',
+    studentIds: ['student-2', 'student-1'],
+    hours: { 'student-2': 4, 'student-1': 4 },
+    notes: { 'student-2': '중위권 지도 (09:00~12:10, 4차시)', 'student-1': '중위권 지도 (09:00~12:10, 4차시)' }
   },
 
-  // 2026년 8월 최신 기록 (중위권 21시간, 1순위 9시간)
+  // ================= 8월 (1순위 8차시 + 중위권 28차시) =================
   {
     id: '2026-08-04',
     date: '2026-08-04',
     studentIds: ['student-2', 'student-1'],
     hours: { 'student-2': 4, 'student-1': 4 },
-    notes: { 'student-2': '기초 문해력 및 수학 기초 연산 지도 (4시간)', 'student-1': '기초 문해력 및 수학 기초 연산 지도 (4시간)' }
+    notes: { 'student-2': '중위권 지도 (13:00~16:10, 4차시)', 'student-1': '중위권 지도 (13:00~16:10, 4차시)' }
   },
   {
     id: '2026-08-05',
     date: '2026-08-05',
     studentIds: ['student-2'],
     hours: { 'student-2': 4 },
-    notes: { 'student-2': '받아쓰기 및 읽기 지도 (4시간)' }
+    notes: { 'student-2': '중위권 개별 지도 (09:00~12:10, 4차시)' }
   },
   {
     id: '2026-08-06',
     date: '2026-08-06',
     studentIds: ['student-3'],
     hours: { 'student-3': 4 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (4시간)' }
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
   },
   {
     id: '2026-08-07',
     date: '2026-08-07',
     studentIds: ['student-3'],
     hours: { 'student-3': 4 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (4시간)' }
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
   },
   {
     id: '2026-08-18',
     date: '2026-08-18',
     studentIds: ['student-2'],
     hours: { 'student-2': 4 },
-    notes: { 'student-2': '국어 낱말 익히기 및 글자 쓰기 (4시간)' }
+    notes: { 'student-2': '중위권 개별 지도 (13:00~16:10, 4차시)' }
   },
   {
     id: '2026-08-24',
     date: '2026-08-24',
     studentIds: ['student-1'],
-    hours: { 'student-1': 1 },
-    notes: { 'student-1': '문장 읽기 및 이해도 확인' }
+    hours: { 'student-1': 4 },
+    notes: { 'student-1': '중위권 개별 지도 (09:00~12:10, 4차시)' }
   },
   {
     id: '2026-08-26',
     date: '2026-08-26',
-    studentIds: ['student-2', 'student-1'],
-    hours: { 'student-2': 4, 'student-1': 1 },
-    notes: { 'student-2': '수학 곱셈구구 및 덧셈 복습 (4시간)', 'student-1': '연산 기초 보충' }
+    studentIds: ['student-1'],
+    hours: { 'student-1': 4 },
+    notes: { 'student-1': '중위권 개별 지도 (13:00~16:10, 4차시)' }
   },
   {
     id: '2026-08-28',
     date: '2026-08-28',
     studentIds: ['student-5'],
-    hours: { 'student-5': 1 },
-    notes: { 'student-5': '학습 집중력 및 기초 어휘 지도' }
+    hours: { 'student-5': 4 },
+    notes: { 'student-5': '중위권 개별 지도 (09:00~12:10, 4차시)' }
   },
   {
     id: '2026-08-31',
     date: '2026-08-31',
-    studentIds: ['student-2'],
-    hours: { 'student-2': 4 },
-    notes: { 'student-2': '월말 학습 성취도 확인 및 복습 (4시간)' }
-  },
-
-  // 2026년 9월 최신 기록 (중위권 4시간, 1순위 8시간)
-  {
-    id: '2026-09-01',
-    date: '2026-09-01',
     studentIds: ['student-2', 'student-1'],
     hours: { 'student-2': 4, 'student-1': 4 },
-    notes: { 'student-2': '2학기 기초 국어 및 수학 연산 지도 (4시간)', 'student-1': '2학기 기초 국어 및 수학 연산 지도 (4시간)' }
+    notes: { 'student-2': '중위권 지도 (09:00~12:10, 4차시)', 'student-1': '중위권 지도 (09:00~12:10, 4차시)' }
   },
+
+  // ================= 9월 (1순위 8차시) =================
   {
     id: '2026-09-04',
     date: '2026-09-04',
     studentIds: ['student-3'],
     hours: { 'student-3': 4 },
-    notes: { 'student-3': '2학기 기초학력 맞춤 지도 (4시간)' }
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
   },
   {
     id: '2026-09-07',
     date: '2026-09-07',
     studentIds: ['student-3'],
     hours: { 'student-3': 4 },
-    notes: { 'student-3': '국어 및 수학 보충 지도 (4시간)' }
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
   }
 ];
 

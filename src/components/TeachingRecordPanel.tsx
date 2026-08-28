@@ -151,7 +151,7 @@ export default function TeachingRecordPanel({
           <div className="bg-indigo-50/70 border border-indigo-100 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center space-x-1.5">
               <Clock size={15} className="text-[#727CF5] shrink-0" />
-              <span className="text-xs font-black text-indigo-950">선택 학생 수업 시간(시수) 일괄 지정:</span>
+              <span className="text-xs font-black text-indigo-950">선택 학생 운영 차시 일괄 지정:</span>
             </div>
             <div className="flex items-center space-x-1.5 overflow-x-auto">
               {[1, 2, 3, 4, 5, 6].map(h => (
@@ -161,7 +161,7 @@ export default function TeachingRecordPanel({
                   onClick={() => handleBulkHoursChange(h)}
                   className="px-2.5 py-1 text-xs font-black rounded-lg bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200/80 shadow-2xs transition-all active:scale-95 cursor-pointer"
                 >
-                  {h}시간
+                  {h}차시
                 </button>
               ))}
             </div>
@@ -199,7 +199,7 @@ export default function TeachingRecordPanel({
                     <span className="text-sm font-extrabold truncate">{student.name}</span>
                     {isSelected ? (
                       <span className="inline-flex items-center space-x-1 bg-[#00B4D8] text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-2xs">
-                        <span>{hours}시간</span>
+                        <span>{hours}차시</span>
                         <CheckCircle size={12} className="stroke-[3]" />
                       </span>
                     ) : (
@@ -243,7 +243,7 @@ export default function TeachingRecordPanel({
                     <span className="text-sm font-extrabold truncate">{student.name}</span>
                     {isSelected ? (
                       <span className="inline-flex items-center space-x-1 bg-[#FF4D6D] text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-2xs">
-                        <span>{hours}시간</span>
+                        <span>{hours}차시</span>
                         <CheckCircle size={12} className="stroke-[3]" />
                       </span>
                     ) : (
