@@ -232,7 +232,7 @@ export default function Calendar({
               <button
                 key={`day-${day}`}
                 onClick={() => onSelectDate(dateStr)}
-                className={`min-h-[68px] sm:min-h-0 sm:aspect-square p-1 sm:p-2 rounded-lg sm:rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group cursor-pointer ${
+                className={`min-h-[72px] sm:min-h-0 sm:aspect-square p-1 sm:p-2 rounded-lg sm:rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group cursor-pointer ${
                   isSelected
                     ? 'border-indigo-600 bg-indigo-50/40 ring-2 sm:ring-3 ring-indigo-500/10 scale-[1.01] sm:scale-[1.02]'
                     : isToday
@@ -263,21 +263,29 @@ export default function Calendar({
                     
                     const hours = record.hours?.[sid] ?? 1;
                     const badgeColor = s.group === '1순위' 
-                      ? 'bg-rose-50 text-[#FF4D6D] border-rose-100' 
+                      ? 'bg-rose-50/90 text-rose-700 border-rose-200' 
                       : s.group === '중위권' 
-                      ? 'bg-sky-50 text-[#00B4D8] border-sky-100' 
-                      : 'bg-slate-50 text-slate-500 border-slate-100';
+                      ? 'bg-sky-50/90 text-sky-700 border-sky-200' 
+                      : 'bg-slate-50 text-slate-700 border-slate-200';
 
                     return (
-                      <span 
+                      <div 
                         key={sid} 
-                        className={`text-[9px] sm:text-[12px] px-1 sm:px-1.5 py-0.5 rounded border leading-none font-black flex items-center justify-between gap-0.5 ${badgeColor}`}
+                        className={`text-[9px] sm:text-[11.5px] px-1 sm:px-1.5 py-0.5 rounded-md border leading-tight font-black flex items-center justify-between gap-0.5 ${badgeColor}`}
+                        title={`${s.name} (${s.group}, ${hours}차시)`}
                       >
-                        <span className="truncate">{s.name}</span>
+                        {/* 학생 이름이 항상 최우선으로 선명하게 표시됨 */}
+                        <span className="font-black tracking-tight text-slate-800 truncate">
+                          {s.name}
+                        </span>
+                        
+                        {/* 2차시 이상인 경우 작고 깔끔한 숫자 뱃지로 표기 */}
                         {hours > 1 && (
-                          <span className="text-[8px] sm:text-[10px] opacity-90 shrink-0 font-black">({hours}차시)</span>
+                          <span className="text-[8px] sm:text-[9.5px] font-black bg-white/90 px-1 py-0.2 rounded text-slate-700 border border-slate-200/60 shrink-0 shadow-2xs">
+                            {hours}<span className="hidden sm:inline">차시</span>
+                          </span>
                         )}
-                      </span>
+                      </div>
                     );
                   })}
                 </div>
