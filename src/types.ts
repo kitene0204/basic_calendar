@@ -11,7 +11,7 @@ export interface TeachingRecord {
   studentIds: string[]; // 지도받은 학생 ID들
   hours?: { [studentId: string]: number }; // 학생 ID별 지도 시수(차시/시간, 기본값 1)
   notes: { [studentId: string]: string }; // 학생 ID별 개별 지도 내용
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface AppSettings {

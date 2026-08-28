@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Trash2, Cloud, HelpCircle, Save, Database, AlertCircle, Copy, Check, Download } from 'lucide-react';
+import { X, UserPlus, Trash2, Cloud, HelpCircle, Save, Database, AlertCircle, Copy, Check, Download, Share2, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { Student } from '../types';
-import { getSupabaseCredentials, SUPABASE_SQL_SETUP } from '../lib/supabase';
+import { getSupabaseCredentials, SUPABASE_SQL_SETUP, generateSyncUrl, syncAllToCloud } from '../lib/supabase';
 
 interface SettingsPanelProps {
   students: Student[];
@@ -36,6 +36,9 @@ export default function SettingsPanel({
   const [sbUrl, setSbUrl] = useState('');
   const [sbKey, setSbKey] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [isSyncUrlCopied, setIsSyncUrlCopied] = useState(false);
+  const [isUploadingToCloud, setIsUploadingToCloud] = useState(false);
+  const [cloudSyncMsg, setCloudSyncMsg] = useState<string | null>(null);
   const [isDbTesting, setIsDbTesting] = useState(false);
   const [dbTestResult, setDbTestResult] = useState<{ success: boolean; msg: string } | null>(null);
 
@@ -75,6 +78,47 @@ export default function SettingsPanel({
     navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  // 모든 기기 원클릭 동기화 링크 복사 기능
+  const handleCopySyncUrl = () => {
+    // 먼저 현재 입력값 저장
+    localStorage.setItem('custom_supabase_url', sbUrl.trim());
+    localStorage.setItem('custom_supabase_anon_key', sbKey.trim());
+    onSupabaseConfigChange();
+
+    const syncUrl = generateSyncUrl();
+    if (!syncUrl) {
+      alert('Supabase URL과 Key를 먼저 올바르게 입력해 주세요.');
+      return;
+    }
+    navigator.clipboard.writeText(syncUrl);
+    setIsSyncUrlCopied(true);
+    setTimeout(() => setIsSyncUrlCopied(false), 3000);
+  };
+
+  // 로컬 최신 데이터 전체를 Supabase 클라우드로 강제 일괄 업로드
+  const handleUploadAllToCloud = async () => {
+    if (!sbUrl || !sbKey) {
+      alert('먼저 Supabase URL과 Key를 입력하고 저장해 주세요.');
+      return;
+    }
+
+    setIsUploadingToCloud(true);
+    setCloudSyncMsg(null);
+    try {
+      const res = await syncAllToCloud();
+      if (res.success) {
+        setCloudSyncMsg(`✅ 최신 데이터(학생 + ${res.count}개 날짜 기록)가 Supabase에 모두 안전하게 업로드되었습니다!`);
+        onSupabaseConfigChange();
+      } else {
+        setCloudSyncMsg(`❌ 업로드 실패: ${res.error}`);
+      }
+    } catch (e: any) {
+      setCloudSyncMsg(`❌ 오류: ${e.message || e}`);
+    } finally {
+      setIsUploadingToCloud(false);
+    }
   };
 
   // Supabase 연결 자격 확인 테스트
@@ -249,7 +293,7 @@ export default function SettingsPanel({
             </select>
             <button
               type="submit"
-              className="bg-[#727CF5] hover:bg-[#5C66E4] text-white p-2.5 rounded-xl flex items-center justify-center transition-colors shadow-xs"
+              className="bg-[#727CF5] hover:bg-[#5C66E4] text-white p-2.5 rounded-xl flex items-center justify-center transition-colors shadow-xs cursor-pointer"
               title="학생 추가"
               id="btn-add-student"
             >
@@ -279,7 +323,7 @@ export default function SettingsPanel({
                     </div>
                     <button
                       onClick={() => onDeleteStudent(student.id)}
-                      className="p-1 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded transition-all"
+                      className="p-1 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded transition-all cursor-pointer"
                       title={`${student.name} 삭제`}
                       id={`btn-del-student-${student.id}`}
                     >
@@ -292,7 +336,7 @@ export default function SettingsPanel({
           </div>
         </section>
 
-        {/* 3. 클라우드 저장 (Supabase) 연동 */}
+        {/* 3. 클라우드 저장 (Supabase) 연동 및 기기 간 동기화 */}
         <section className="space-y-4 pt-4 border-t border-slate-100">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-700 flex items-center space-x-1.5">
@@ -325,13 +369,47 @@ export default function SettingsPanel({
               />
             </div>
 
+            {/* 원클릭 기기 동기화 링크 생성 및 전체 업로드 */}
+            <div className="pt-2 border-t border-slate-200/60 space-y-2.5">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopySyncUrl}
+                  className="flex-1 px-3 py-2 bg-[#727CF5] hover:bg-[#5C66E4] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                  title="다른 PC나 스마트폰 브라우저에서 이 링크로 접속하면 자동으로 클라우드가 연동됩니다."
+                  id="btn-copy-sync-url"
+                >
+                  {isSyncUrlCopied ? <CheckCircle2 size={15} className="text-emerald-300" /> : <Share2 size={15} />}
+                  <span>{isSyncUrlCopied ? '동기화 전용 링크 복사완료!' : '🔗 다른 PC/폰 동기화 링크 복사'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleUploadAllToCloud}
+                  disabled={isUploadingToCloud}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                  title="현재 화면의 모든 최신 데이터를 Supabase 클라우드로 즉시 업로드합니다."
+                  id="btn-upload-all-cloud"
+                >
+                  <UploadCloud size={15} className={isUploadingToCloud ? 'animate-bounce' : ''} />
+                  <span>{isUploadingToCloud ? '업로드 중...' : '☁️ 최신 데이터 전체 클라우드 동기화'}</span>
+                </button>
+              </div>
+
+              {cloudSyncMsg && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium rounded-lg">
+                  {cloudSyncMsg}
+                </div>
+              )}
+            </div>
+
             {/* 연결 테스트 및 상태 */}
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-1">
               <button
                 type="button"
                 onClick={handleTestConnection}
                 disabled={isDbTesting}
-                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-[#727CF5] font-bold text-xs rounded-lg border border-indigo-100 transition-colors"
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 font-bold text-xs rounded-lg border border-slate-200 transition-colors cursor-pointer"
                 id="btn-test-db"
               >
                 {isDbTesting ? '연결 확인 중...' : '연결 및 테이블 확인'}
@@ -361,7 +439,7 @@ export default function SettingsPanel({
               <button
                 type="button"
                 onClick={handleCopySql}
-                className="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-white p-1.5 rounded-md transition-colors"
+                className="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-white p-1.5 rounded-md transition-colors cursor-pointer"
                 title="SQL 복사하기"
               >
                 {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
@@ -375,7 +453,7 @@ export default function SettingsPanel({
       <div className="p-4 bg-slate-50 border-t border-slate-100 flex space-x-2">
         <button
           onClick={handleSaveSettings}
-          className="flex-1 py-3.5 bg-[#727CF5] hover:bg-[#5C66E4] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 text-sm"
+          className="flex-1 py-3.5 bg-[#727CF5] hover:bg-[#5C66E4] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 text-sm cursor-pointer"
           id="btn-save-all-settings"
         >
           <Save size={16} />

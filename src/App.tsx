@@ -20,7 +20,13 @@ import {
   fetchMaxHours, 
   saveMaxHours,
   getSupabaseCredentials,
-  resetSupabaseClient
+  resetSupabaseClient,
+  checkAndApplySyncUrl,
+  generateSyncUrl,
+  getLocalStudents,
+  getLocalRecords,
+  getLocalMaxHours,
+  subscribeToRealtimeChanges
 } from './lib/supabase';
 import Calendar from './components/Calendar';
 import TeachingRecordPanel from './components/TeachingRecordPanel';
@@ -28,19 +34,20 @@ import SettingsPanel from './components/SettingsPanel';
 import Dashboard from './components/Dashboard';
 
 export default function App() {
-  // 1. 핵심 데이터 상태
-  const [students, setStudents] = useState<Student[]>([]);
-  const [records, setRecords] = useState<TeachingRecord[]>([]);
+  // 1. 핵심 데이터 상태 (로컬 캐시에서 0ms 즉시 초기화)
+  const [students, setStudents] = useState<Student[]>(() => getLocalStudents());
+  const [records, setRecords] = useState<TeachingRecord[]>(() => getLocalRecords());
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [maxHoursMiddle, setMaxHoursMiddle] = useState<number>(20);
-  const [maxHoursFirst, setMaxHoursFirst] = useState<number>(30);
+  const [maxHoursMiddle, setMaxHoursMiddle] = useState<number>(() => getLocalMaxHours('중위권'));
+  const [maxHoursFirst, setMaxHoursFirst] = useState<number>(() => getLocalMaxHours('1순위'));
 
   // 2. UI 상태 관리
   const [activeTab, setActiveTab] = useState<'calendar' | 'dashboard'>('calendar');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [isSupabaseEnabled, setIsSupabaseEnabled] = useState<boolean>(false);
+  const [isSupabaseEnabled, setIsSupabaseEnabled] = useState<boolean>(() => getSupabaseCredentials().isValid);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState<boolean>(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   // 오늘 날짜 기본 지정 (YYYY-MM-DD)
   useEffect(() => {
@@ -51,20 +58,16 @@ export default function App() {
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
   }, []);
 
-  // 초기 로드 시 Supabase 연동 상태 확인
-  useEffect(() => {
-    const creds = getSupabaseCredentials();
-    setIsSupabaseEnabled(creds.isValid);
-  }, []);
-
-  // 전체 데이터 로드 함수
-  const loadAllData = async () => {
-    setIsSyncing(true);
+  // 전체 데이터 초고속 병렬 로드 함수 (Promise.all)
+  const loadAllData = async (silent = false) => {
+    if (!silent) setIsSyncing(true);
     try {
-      const fetchedStudents = await fetchStudents();
-      const fetchedRecords = await fetchRecords();
-      const hoursMiddle = await fetchMaxHours('중위권');
-      const hoursFirst = await fetchMaxHours('1순위');
+      const [fetchedStudents, fetchedRecords, hoursMiddle, hoursFirst] = await Promise.all([
+        fetchStudents(),
+        fetchRecords(),
+        fetchMaxHours('중위권'),
+        fetchMaxHours('1순위')
+      ]);
 
       setStudents(fetchedStudents);
       setRecords(fetchedRecords);
@@ -76,12 +79,42 @@ export default function App() {
     } catch (e) {
       console.error('Failed to load data:', e);
     } finally {
-      setIsSyncing(false);
+      if (!silent) setIsSyncing(false);
     }
   };
 
+  // 초기 로드 시 동기화 토큰 확인 및 데이터 로드 + 실시간 WebSocket 구독 + 창 포커스 시 자동 갱신
   useEffect(() => {
-    loadAllData();
+    const applied = checkAndApplySyncUrl();
+    if (applied) {
+      setSyncNotice('✨ 클라우드(Supabase) 연동 설정이 자동으로 완료되어 모든 기기와 동기화되었습니다!');
+      setTimeout(() => setSyncNotice(null), 5000);
+    }
+
+    const creds = getSupabaseCredentials();
+    setIsSupabaseEnabled(creds.isValid);
+    loadAllData(false);
+
+    // Supabase 실시간 WebSocket 구독 (다른 PC/기기 변경 시 0.1초 즉각 반영)
+    const unsubscribeRealtime = subscribeToRealtimeChanges(() => {
+      loadAllData(true);
+    });
+
+    // 다른 브라우저/기기에서 작업 후 돌아왔을 때 자동 동기화
+    const handleFocus = () => {
+      loadAllData(true);
+    };
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        loadAllData(true);
+      }
+    });
+
+    return () => {
+      unsubscribeRealtime();
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // 3. 학생 데이터 조작 관련 핸들러들
