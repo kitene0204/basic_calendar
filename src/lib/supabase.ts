@@ -51,7 +51,7 @@ const STORAGE_KEYS = {
 };
 
 // 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
-export const CURRENT_DATA_VERSION = '2026-08-28-v12-production';
+export const CURRENT_DATA_VERSION = '2026-08-28-v13-middle-5h-first-13h';
 
 // 초기 기본 학생 명단 (최신 8, 9월 데이터 반영)
 export const INITIAL_STUDENTS: Student[] = [
@@ -62,9 +62,9 @@ export const INITIAL_STUDENTS: Student[] = [
   { id: 'student-5', name: '엄호준', group: '1순위', createdAt: new Date().toISOString() }
 ];
 
-// 초기 기본 지도 기록 (8월, 9월 최신 기록 및 누적 시수 중위권 31시간, 1순위 26시간 완벽 반영)
+// 초기 기본 지도 기록 (누적 시수 중위권 35시간[남은시수 5시간], 1순위 27시간[남은시수 13시간] 완벽 반영)
 export const INITIAL_RECORDS: TeachingRecord[] = [
-  // 1학기 누적 시수 (중위권 10시간, 1순위 9시간)
+  // 1학기/7월 누적 시수 (중위권 10시간, 1순위 10시간)
   {
     id: '2026-07-07',
     date: '2026-07-07',
@@ -115,6 +115,13 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-1': '여름방학 전 학습 정리', 'student-2': '여름방학 전 학습 정리' }
   },
   {
+    id: '2026-07-29',
+    date: '2026-07-29',
+    studentIds: ['student-4'],
+    hours: { 'student-4': 1 },
+    notes: { 'student-4': '기초학력 개별 보충 지도' }
+  },
+  {
     id: '2026-07-30',
     date: '2026-07-30',
     studentIds: ['student-1', 'student-2'],
@@ -122,7 +129,7 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-1': '1학기 최종 보충', 'student-2': '1학기 최종 보충' }
   },
 
-  // 2026년 8월 최신 기록 (이미지 1 일치)
+  // 2026년 8월 최신 기록 (중위권 21시간, 1순위 9시간)
   {
     id: '2026-08-04',
     date: '2026-08-04',
@@ -187,7 +194,14 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-2': '월말 학습 성취도 확인 및 복습 (4시간)' }
   },
 
-  // 2026년 9월 최신 기록 (이미지 2 일치)
+  // 2026년 9월 최신 기록 (중위권 4시간, 1순위 8시간)
+  {
+    id: '2026-09-01',
+    date: '2026-09-01',
+    studentIds: ['student-2', 'student-1'],
+    hours: { 'student-2': 4, 'student-1': 4 },
+    notes: { 'student-2': '2학기 기초 국어 및 수학 연산 지도 (4시간)', 'student-1': '2학기 기초 국어 및 수학 연산 지도 (4시간)' }
+  },
   {
     id: '2026-09-04',
     date: '2026-09-04',
