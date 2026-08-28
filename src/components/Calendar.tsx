@@ -271,11 +271,11 @@ export default function Calendar({
                     return (
                       <span 
                         key={sid} 
-                        className={`text-[9px] sm:text-[12px] px-1 sm:px-1.5 py-0.5 rounded border leading-none truncate font-black flex items-center justify-between gap-0.5 ${badgeColor}`}
+                        className={`text-[9px] sm:text-[12px] px-1 sm:px-1.5 py-0.5 rounded border leading-none font-black flex items-center justify-between gap-0.5 ${badgeColor}`}
                       >
                         <span className="truncate">{s.name}</span>
                         {hours > 1 && (
-                          <span className="text-[8px] sm:text-[10px] opacity-90 shrink-0 font-black">({hours}h)</span>
+                          <span className="text-[8px] sm:text-[10px] opacity-90 shrink-0 font-black">({hours}차시)</span>
                         )}
                       </span>
                     );

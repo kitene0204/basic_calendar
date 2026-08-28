@@ -89,14 +89,14 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* 누적 지도 시수 */}
+        {/* 누적 지도 차시 */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl">
             <Calendar size={24} />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-semibold block">누적 지도 시수</span>
-            <span className="text-xl font-black text-slate-800">{totalTeachingHours}시간</span>
+            <span className="text-xs text-slate-400 font-semibold block">누적 지도 차시</span>
+            <span className="text-xl font-black text-slate-800">{totalTeachingHours}차시</span>
             <span className="text-[10px] text-slate-400 block mt-0.5">총 {records.length}일간 진행됨</span>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function Dashboard({
                 ? Math.round(studentStats.filter(s => s.group === '중위권').reduce((acc, cur) => acc + cur.progress, 0) / totalMiddleStudents) 
                 : 0}%
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}시간 기준</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}차시 기준</span>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function Dashboard({
                 ? Math.round(studentStats.filter(s => s.group === '1순위').reduce((acc, cur) => acc + cur.progress, 0) / totalFirstStudents) 
                 : 0}%
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}시간 기준</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}차시 기준</span>
           </div>
         </div>
       </div>
@@ -139,17 +139,17 @@ export default function Dashboard({
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center space-x-1.5">
             <TrendingUp size={16} className="text-[#727CF5]" />
-            <span>학생별 누적 지도 시수(시간) 비교</span>
+            <span>학생별 누적 운영 차시 비교</span>
           </h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                 <XAxis dataKey="name" tick={{ fill: '#64748B', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} unit="h" />
+                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} unit="차시" />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1E293B', borderRadius: '8px', border: 'none', color: '#FFF' }}
                   labelStyle={{ fontWeight: 'bold' }}
-                  formatter={(val: any) => [`${val}시간`, '누적 시수']}
+                  formatter={(val: any) => [`${val}차시`, '누적 차시']}
                 />
                 <Bar dataKey="지도시간" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => {

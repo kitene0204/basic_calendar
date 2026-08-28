@@ -127,11 +127,11 @@ export default function TeachingRecordPanel({
             {currentStudentIds.length > 0 && (
               <span className="bg-indigo-50 text-[#727CF5] font-black text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full border border-indigo-100 flex items-center space-x-1">
                 <Clock size={11} className="stroke-[2.5]" />
-                <span>총 {currentStudentIds.length}명 · {totalDayHours}시간</span>
+                <span>총 {currentStudentIds.length}명 · {totalDayHours}차시</span>
               </span>
             )}
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">지도한 학생과 수업 시수를 선택하세요.</p>
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">지도한 학생과 운영 차시를 선택하세요.</p>
         </div>
         <button
           onClick={onClose}
@@ -304,9 +304,9 @@ export default function TeachingRecordPanel({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <BookOpen size={16} className="text-indigo-500" />
-                <h3 className="text-sm font-bold text-slate-700">학생별 수업 시수(시간) 및 지도 내용</h3>
+                <h3 className="text-sm font-bold text-slate-700">학생별 운영 차시 및 지도 내용</h3>
               </div>
-              <span className="text-[11px] text-slate-400">각 학생별 시간 조정 가능</span>
+              <span className="text-[11px] text-slate-400">학생별 차시 조정 가능</span>
             </div>
             
             <div className="space-y-3.5">
@@ -324,7 +324,7 @@ export default function TeachingRecordPanel({
                 return (
                   <div key={studentId} className="bg-slate-50 p-4 rounded-xl border border-slate-200/70 space-y-3">
                     
-                    {/* 학생 이름 & 시수 조절 컨트롤러 */}
+                    {/* 학생 이름 & 차시 조절 컨트롤러 */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200/50">
                       <div className="flex items-center space-x-2">
                         <span className="font-black text-slate-900 text-sm">{student.name}</span>
@@ -333,9 +333,9 @@ export default function TeachingRecordPanel({
                         </span>
                       </div>
 
-                      {/* 시수(시간) 증감 및 퀵 선택 컨트롤 */}
+                      {/* 운영 차시 증감 및 퀵 선택 컨트롤 */}
                       <div className="flex items-center space-x-2">
-                        <span className="text-[11px] font-bold text-slate-500">지도 시수:</span>
+                        <span className="text-[11px] font-bold text-slate-500">운영 차시:</span>
                         
                         {/* - 버튼 */}
                         <div className="inline-flex items-center bg-white border border-slate-300 rounded-lg p-0.5 shadow-2xs">
@@ -344,7 +344,7 @@ export default function TeachingRecordPanel({
                             onClick={() => handleHoursChange(studentId, studentHours - 1)}
                             disabled={studentHours <= 1}
                             className="p-1 hover:bg-slate-100 active:bg-slate-200 rounded text-slate-600 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors cursor-pointer"
-                            title="1시간 감소"
+                            title="1차시 감소"
                           >
                             <Minus size={13} />
                           </button>
@@ -357,14 +357,14 @@ export default function TeachingRecordPanel({
                             onChange={(e) => handleHoursChange(studentId, parseInt(e.target.value, 10) || 1)}
                             className="w-10 text-center text-xs font-black text-slate-900 focus:outline-none"
                           />
-                          <span className="text-[11px] font-bold text-slate-500 pr-1.5">시간</span>
+                          <span className="text-[11px] font-bold text-slate-500 pr-1.5">차시</span>
 
                           {/* + 버튼 */}
                           <button
                             type="button"
                             onClick={() => handleHoursChange(studentId, studentHours + 1)}
                             className="p-1 hover:bg-slate-100 active:bg-slate-200 rounded text-slate-600 transition-colors cursor-pointer"
-                            title="1시간 증가"
+                            title="1차시 증가"
                           >
                             <Plus size={13} />
                           </button>
@@ -383,7 +383,7 @@ export default function TeachingRecordPanel({
                                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                               }`}
                             >
-                              {h}h
+                              {h}차시
                             </button>
                           ))}
                         </div>

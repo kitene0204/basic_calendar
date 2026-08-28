@@ -189,20 +189,24 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800" id="app-wrapper">
       
-      {/* 글로벌 상단 내비게이션 바 */}
-      <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 shrink-0 shadow-xs z-10">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600">
-            <CalendarIcon size={20} className="stroke-[2.5]" />
+      {/* 글로벌 상단 내비게이션 바 (모바일 360px~412px 화면에서도 겹침 없는 완벽한 반응형) */}
+      <header className="min-h-[3.5rem] sm:h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-2.5 sm:px-6 py-1.5 sm:py-0 shrink-0 shadow-xs z-20">
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          <div className="p-1.5 sm:p-2.5 bg-indigo-50 rounded-xl text-indigo-600 shrink-0">
+            <CalendarIcon size={18} className="sm:w-5 sm:h-5 stroke-[2.5]" />
           </div>
-          <div>
-            <h1 className="text-base font-black text-slate-900 tracking-tight leading-none">학급 기초학력 지도 달력</h1>
-            <p className="text-[10px] text-slate-400 font-bold mt-1.5 uppercase tracking-wider">Elementary Growth Calendar</p>
+          <div className="min-w-0">
+            <h1 className="text-xs sm:text-base font-black text-slate-900 tracking-tight leading-tight whitespace-nowrap">
+              기초학력 지도 달력
+            </h1>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden sm:block">
+              Elementary Growth Calendar
+            </p>
           </div>
         </div>
 
         {/* 탭 컨트롤러 & 클라우드 상태 */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
           
           {/* Supabase 클라우드 즉시 동기화 트리거 버튼 */}
           <button
@@ -224,7 +228,7 @@ export default function App() {
               }
             }}
             disabled={isSyncing}
-            className={`px-3 py-2 text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition-all cursor-pointer ${
+            className={`px-2 sm:px-3 py-1.5 sm:py-2 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-xs flex items-center space-x-1 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               isSupabaseEnabled 
                 ? 'bg-gradient-to-r from-[#3ECF8E] to-[#10B981] hover:from-[#34D399] hover:to-[#059669] shadow-emerald-500/20 active:scale-95' 
                 : 'bg-gradient-to-r from-[#727CF5] to-[#5C66E4] hover:from-[#5C66E4] hover:to-[#4A53D4]'
@@ -232,9 +236,15 @@ export default function App() {
             title={isSupabaseEnabled ? '클릭 시 Supabase 클라우드로 지금 바로 동기화합니다' : 'Supabase 클라우드 설정 열기'}
             id="btn-trigger-supabase-sync"
           >
-            <CloudLightning size={14} className={isSyncing ? 'animate-bounce' : ''} />
+            <CloudLightning size={13} className={isSyncing ? 'animate-bounce shrink-0' : 'shrink-0'} />
             <span className="font-black">
-              {isSyncing ? '클라우드 전송 중...' : isSupabaseEnabled ? '슈파베이스 즉시 동기화' : '슈파베이스 연동하기'}
+              {isSyncing ? '전송중' : isSupabaseEnabled ? (
+                <>
+                  <span className="hidden sm:inline">슈파베이스 </span>동기화
+                </>
+              ) : (
+                '연동하기'
+              )}
             </span>
           </button>
 
@@ -242,42 +252,41 @@ export default function App() {
           <button
             onClick={() => loadAllData(false)}
             disabled={isSyncing}
-            className="p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-500 rounded-xl border border-slate-100 transition-colors cursor-pointer shrink-0"
-            title="실시간 새로고침 및 수동 동기화"
+            className="p-1.5 sm:p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-500 rounded-xl border border-slate-100 transition-colors cursor-pointer shrink-0"
+            title="실시간 새로고침"
             id="btn-sync-trigger"
           >
-            <RefreshCw size={16} className={isSyncing ? 'animate-spin text-[#727CF5]' : ''} />
+            <RefreshCw size={14} className={`sm:w-4 sm:h-4 ${isSyncing ? 'animate-spin text-[#727CF5]' : ''}`} />
           </button>
 
           {/* 탭 스위처 */}
-          <div className="bg-slate-100 p-1 rounded-xl flex space-x-1 border border-slate-200/30 shrink-0">
+          <div className="bg-slate-100 p-0.5 sm:p-1 rounded-xl flex space-x-0.5 sm:space-x-1 border border-slate-200/40 shrink-0">
             <button
               onClick={() => {
                 setActiveTab('calendar');
                 setIsSettingsOpen(false);
               }}
-              className={`px-2.5 sm:px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer ${
+              className={`px-2 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-extrabold rounded-lg flex items-center space-x-1 transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'calendar'
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <CalendarIcon size={13} />
-              <span className="hidden xs:inline">달력</span>
-              <span className="xs:hidden">달력</span>
+              <CalendarIcon size={12} className="sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span>달력</span>
             </button>
             <button
               onClick={() => {
                 setActiveTab('dashboard');
                 setIsSettingsOpen(false);
               }}
-              className={`px-2.5 sm:px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer ${
+              className={`px-2 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-extrabold rounded-lg flex items-center space-x-1 transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'dashboard'
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <LayoutDashboard size={13} />
+              <LayoutDashboard size={12} className="sm:w-3.5 sm:h-3.5 shrink-0" />
               <span className="hidden sm:inline">종합 대시보드</span>
               <span className="sm:hidden">통계</span>
             </button>
@@ -286,7 +295,7 @@ export default function App() {
           {/* 설정 열기 버튼 */}
           <button
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
+            className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
               isSettingsOpen 
                 ? 'bg-[#727CF5] border-[#727CF5] text-white' 
                 : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-500'
@@ -294,7 +303,7 @@ export default function App() {
             title="설정 및 학생 명단 관리"
             id="btn-global-settings"
           >
-            <Settings size={16} />
+            <Settings size={14} className="sm:w-4 sm:h-4" />
           </button>
         </div>
       </header>
