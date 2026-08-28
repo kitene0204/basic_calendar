@@ -268,23 +268,28 @@ export default function Calendar({
                       ? 'bg-sky-50/90 text-sky-700 border-sky-200' 
                       : 'bg-slate-50 text-slate-700 border-slate-200';
 
+                    // 성을 빼고 이름만 표시 (예: 황혜리 -> 혜리, 전성후 -> 성후, 엄호준 -> 호준, 이솔빛나 -> 솔빛나, 이정 -> 정)
+                    const getDisplayName = (fullName: string) => {
+                      if (!fullName) return '';
+                      const trimmed = fullName.trim();
+                      if (trimmed.length > 1) {
+                        return trimmed.slice(1);
+                      }
+                      return trimmed;
+                    };
+
+                    const displayName = getDisplayName(s.name);
+
                     return (
                       <div 
                         key={sid} 
-                        className={`text-[9px] sm:text-[11.5px] px-1 sm:px-1.5 py-0.5 rounded-md border leading-tight font-black flex items-center justify-between gap-0.5 ${badgeColor}`}
+                        className={`text-[10px] sm:text-[12px] px-1 sm:px-1.5 py-0.5 rounded-md border leading-tight font-black text-center whitespace-nowrap overflow-hidden text-ellipsis ${badgeColor}`}
                         title={`${s.name} (${s.group}, ${hours}차시)`}
                       >
-                        {/* 학생 이름이 항상 최우선으로 선명하게 표시됨 */}
-                        <span className="font-black tracking-tight text-slate-800 truncate">
-                          {s.name}
+                        {/* 성을 뺀 이름만 크고 선명하게 표시 */}
+                        <span className="font-black tracking-tight text-slate-800">
+                          {displayName}
                         </span>
-                        
-                        {/* 2차시 이상인 경우 작고 깔끔한 숫자 뱃지로 표기 */}
-                        {hours > 1 && (
-                          <span className="text-[8px] sm:text-[9.5px] font-black bg-white/90 px-1 py-0.2 rounded text-slate-700 border border-slate-200/60 shrink-0 shadow-2xs">
-                            {hours}<span className="hidden sm:inline">차시</span>
-                          </span>
-                        )}
                       </div>
                     );
                   })}
