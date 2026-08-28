@@ -27,6 +27,7 @@ import {
   getLocalStudents,
   getLocalRecords,
   getLocalMaxHours,
+  syncAllToCloud,
   subscribeToRealtimeChanges
 } from './lib/supabase';
 import Calendar from './components/Calendar';
@@ -201,25 +202,47 @@ export default function App() {
         </div>
 
         {/* 탭 컨트롤러 & 클라우드 상태 */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           
-          {/* 기기 간 동기화 센터 오픈 버튼 */}
+          {/* Supabase 클라우드 즉시 동기화 트리거 버튼 */}
           <button
-            onClick={() => setIsSyncModalOpen(true)}
-            className="px-3 py-2 bg-gradient-to-r from-[#727CF5] to-[#5C66E4] hover:from-[#5C66E4] hover:to-[#4A53D4] text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition-all cursor-pointer animate-pulse-subtle"
-            title="다른 브라우저 / 기기 즉시 동기화"
-            id="btn-open-sync-hub"
+            onClick={async () => {
+              if (!isSupabaseEnabled) {
+                setIsSettingsOpen(true);
+                return;
+              }
+              setIsSyncing(true);
+              const res = await syncAllToCloud();
+              setIsSyncing(false);
+              if (res.success) {
+                setSyncNotice('☁️ Supabase 클라우드에 현재 모든 데이터가 100% 즉시 동기화되었습니다!');
+                setTimeout(() => setSyncNotice(null), 5000);
+                await loadAllData(true);
+              } else {
+                setSyncNotice(`⚠️ 동기화 실패: ${res.error || '연결 상태를 확인해주세요.'}`);
+                setTimeout(() => setSyncNotice(null), 6000);
+              }
+            }}
+            disabled={isSyncing}
+            className={`px-3 py-2 text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition-all cursor-pointer ${
+              isSupabaseEnabled 
+                ? 'bg-gradient-to-r from-[#3ECF8E] to-[#10B981] hover:from-[#34D399] hover:to-[#059669] shadow-emerald-500/20 active:scale-95' 
+                : 'bg-gradient-to-r from-[#727CF5] to-[#5C66E4] hover:from-[#5C66E4] hover:to-[#4A53D4]'
+            }`}
+            title={isSupabaseEnabled ? '클릭 시 Supabase 클라우드로 지금 바로 동기화합니다' : 'Supabase 클라우드 설정 열기'}
+            id="btn-trigger-supabase-sync"
           >
-            <Share2 size={14} />
-            <span className="hidden sm:inline">기기 간 데이터 동기화</span>
-            <span className="sm:hidden">동기화</span>
+            <CloudLightning size={14} className={isSyncing ? 'animate-bounce' : ''} />
+            <span className="font-black">
+              {isSyncing ? '클라우드 전송 중...' : isSupabaseEnabled ? '슈파베이스 즉시 동기화' : '슈파베이스 연동하기'}
+            </span>
           </button>
 
-          {/* 수동 동기화/새로고침 버튼 */}
+          {/* 수동 새로고침 버튼 */}
           <button
             onClick={() => loadAllData(false)}
             disabled={isSyncing}
-            className="p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-500 rounded-xl border border-slate-100 transition-colors cursor-pointer"
+            className="p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-500 rounded-xl border border-slate-100 transition-colors cursor-pointer shrink-0"
             title="실시간 새로고침 및 수동 동기화"
             id="btn-sync-trigger"
           >
@@ -227,41 +250,43 @@ export default function App() {
           </button>
 
           {/* 탭 스위처 */}
-          <div className="bg-slate-100 p-1 rounded-xl flex space-x-1 border border-slate-200/30">
+          <div className="bg-slate-100 p-1 rounded-xl flex space-x-1 border border-slate-200/30 shrink-0">
             <button
               onClick={() => {
                 setActiveTab('calendar');
                 setIsSettingsOpen(false);
               }}
-              className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer ${
                 activeTab === 'calendar'
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               <CalendarIcon size={13} />
-              <span>지도 달력</span>
+              <span className="hidden xs:inline">달력</span>
+              <span className="xs:hidden">달력</span>
             </button>
             <button
               onClick={() => {
                 setActiveTab('dashboard');
                 setIsSettingsOpen(false);
               }}
-              className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer ${
                 activeTab === 'dashboard'
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               <LayoutDashboard size={13} />
-              <span>종합 대시보드</span>
+              <span className="hidden sm:inline">종합 대시보드</span>
+              <span className="sm:hidden">통계</span>
             </button>
           </div>
 
           {/* 설정 열기 버튼 */}
           <button
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+            className={`p-2 rounded-xl border transition-all cursor-pointer shrink-0 ${
               isSettingsOpen 
                 ? 'bg-[#727CF5] border-[#727CF5] text-white' 
                 : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-500'
@@ -274,33 +299,33 @@ export default function App() {
         </div>
       </header>
 
-      {/* 동기화 성공 알림 바 */}
+      {/* 동기화 성공/에러 알림 바 */}
       {syncNotice && (
-        <div className="bg-emerald-500 text-white px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md animate-fade-in z-20">
+        <div className="bg-emerald-600 text-white px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md animate-fade-in z-20">
           <div className="flex items-center space-x-2">
-            <CheckCircle2 size={16} />
-            <span>{syncNotice}</span>
+            <CheckCircle2 size={16} className="shrink-0" />
+            <span className="line-clamp-1">{syncNotice}</span>
           </div>
-          <button onClick={() => setSyncNotice(null)} className="text-white/80 hover:text-white cursor-pointer font-extrabold">
+          <button onClick={() => setSyncNotice(null)} className="text-white/80 hover:text-white cursor-pointer font-extrabold ml-2">
             ✕
           </button>
         </div>
       )}
 
-      {/* 실시간 백업 보증용 고수준 안내창 */}
+      {/* 실시간 백업 보증용 안내창 */}
       {!isSupabaseEnabled && !syncNotice && (
-        <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-2 flex items-center justify-between">
+        <div className="bg-emerald-50 border-b border-emerald-100 px-4 sm:px-6 py-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <CloudLightning size={14} className="text-[#727CF5]" />
-            <p className="text-[11px] text-indigo-950 font-bold leading-none">
-              다른 PC/스마트폰과 데이터를 일치시키려면 상단 <b>[기기 간 데이터 동기화]</b> 버튼을 눌러 링크를 복사하세요!
+            <CloudLightning size={14} className="text-emerald-600 shrink-0" />
+            <p className="text-[11px] text-emerald-950 font-bold leading-tight">
+              슈파베이스를 연동하면 상단 <b>[슈파베이스 즉시 동기화]</b> 버튼으로 스마트폰/PC 간에 실시간 동기화됩니다.
             </p>
           </div>
           <button 
-            onClick={() => setIsSyncModalOpen(true)}
-            className="text-[10px] text-[#727CF5] font-black hover:underline leading-none cursor-pointer"
+            onClick={() => setIsSettingsOpen(true)}
+            className="text-[11px] text-emerald-700 font-black hover:underline leading-none cursor-pointer shrink-0 ml-2"
           >
-            동기화 링크 복사 &rarr;
+            연동 설정 &rarr;
           </button>
         </div>
       )}
@@ -309,7 +334,7 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden relative">
         
         {/* 중앙 워크스페이스 */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-6">
           <div className="max-w-6xl mx-auto h-full">
             {activeTab === 'calendar' ? (
               <div className="w-full space-y-4">

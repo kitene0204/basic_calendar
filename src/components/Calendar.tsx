@@ -109,47 +109,48 @@ export default function Calendar({
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden" id="calendar-container">
       {/* 1. 보라색 상단 헤더 바 */}
-      <div className="bg-[#727CF5] px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-white">
-        <div className="flex items-center space-x-3">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">기초학력 지도 달력</h1>
-          {isSupabaseEnabled ? (
-            <span className="bg-emerald-500 text-white text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-400 animate-pulse">
-              클라우드 저장 (Supabase)
-            </span>
-          ) : (
-            <span className="bg-amber-400 text-yellow-950 text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full">
-              로컬 저장 모드 (기기에만 저장됨)
-            </span>
-          )}
+      <div className="bg-[#727CF5] px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 text-white">
+        <div className="flex items-center justify-between sm:justify-start space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-2">
+            <h1 className="text-lg sm:text-2xl font-black tracking-tight">지도 달력</h1>
+            {isSupabaseEnabled ? (
+              <span className="bg-emerald-500 text-white text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-emerald-400">
+                Supabase 연동됨
+              </span>
+            ) : (
+              <span className="bg-amber-400 text-yellow-950 text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                로컬 모드
+              </span>
+            )}
+          </div>
           
           <button 
             onClick={onOpenSettings}
-            className="p-1.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer sm:hidden"
             title="설정창 열기"
-            id="btn-settings"
           >
-            <Settings size={20} className="text-white" />
+            <Settings size={18} className="text-white" />
           </button>
         </div>
 
         {/* 월 이동 컨트롤러 */}
-        <div className="flex items-center justify-end space-x-4">
+        <div className="flex items-center justify-between sm:justify-end space-x-3 bg-white/10 sm:bg-transparent px-3 py-1.5 sm:p-0 rounded-xl">
           <button
             onClick={prevMonth}
-            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer active:scale-95"
             title="이전 달"
             id="btn-prev-month"
           >
             <ChevronLeft size={20} />
           </button>
           
-          <span className="text-lg sm:text-xl font-bold min-w-[120px] text-center">
+          <span className="text-base sm:text-xl font-black min-w-[110px] text-center tracking-tight">
             {year}년 {month + 1}월
           </span>
 
           <button
             onClick={nextMonth}
-            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors cursor-pointer active:scale-95"
             title="다음 달"
             id="btn-next-month"
           >
@@ -159,48 +160,48 @@ export default function Calendar({
       </div>
 
       {/* 2. 요약 카드 행 */}
-      <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-slate-50/80 px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-100 grid grid-cols-2 gap-2 sm:gap-4">
         {/* 중위권 요약 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="w-3 h-3 rounded-full bg-[#00B4D8]" />
-            <span className="font-bold text-slate-800 text-sm sm:text-base">중위권</span>
-            <span className="text-xs text-slate-500 font-semibold bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100">
-              진행 {middleTeachingHours}시간
+        <div className="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#00B4D8] shrink-0" />
+            <span className="font-bold text-slate-800 text-xs sm:text-base">중위권</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 font-bold bg-sky-50 px-1.5 py-0.5 rounded border border-sky-100">
+              {middleTeachingHours}h
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-xs text-slate-400 block sm:inline mr-2">남은 시수:</span>
-            <span className="font-extrabold text-[#00B4D8] text-base sm:text-lg">{middleRemaining}시간</span>
-            <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursMiddle}시간</span>
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] sm:text-xs text-slate-400 block sm:inline mr-1">잔여:</span>
+            <span className="font-extrabold text-[#00B4D8] text-sm sm:text-lg">{middleRemaining}시간</span>
+            <span className="text-slate-400 text-xs sm:text-base"> / {maxHoursMiddle}h</span>
           </div>
         </div>
 
         {/* 1순위 요약 */}
-        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="w-3 h-3 rounded-full bg-[#FF4D6D]" />
-            <span className="font-bold text-slate-800 text-sm sm:text-base">1순위</span>
-            <span className="text-xs text-slate-500 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
-              진행 {firstTeachingHours}시간
+        <div className="bg-white p-2.5 sm:p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF4D6D] shrink-0" />
+            <span className="font-bold text-slate-800 text-xs sm:text-base">1순위</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+              {firstTeachingHours}h
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-xs text-slate-400 block sm:inline mr-2">남은 시수:</span>
-            <span className="font-extrabold text-[#FF4D6D] text-base sm:text-lg">{firstRemaining}시간</span>
-            <span className="text-slate-400 text-sm sm:text-base"> / {maxHoursFirst}시간</span>
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] sm:text-xs text-slate-400 block sm:inline mr-1">잔여:</span>
+            <span className="font-extrabold text-[#FF4D6D] text-sm sm:text-lg">{firstRemaining}시간</span>
+            <span className="text-slate-400 text-xs sm:text-base"> / {maxHoursFirst}h</span>
           </div>
         </div>
       </div>
 
       {/* 3. 달력 바디 */}
-      <div className="p-6">
+      <div className="p-2 sm:p-6">
         {/* 요일 헤더 */}
-        <div className="grid grid-cols-7 gap-2 text-center mb-3">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center mb-1.5 sm:mb-3">
           {DAYS_OF_WEEK.map((day, index) => (
             <div
               key={day}
-              className={`text-sm font-bold py-1.5 ${
+              className={`text-xs sm:text-sm font-black py-1 ${
                 index === 0 ? 'text-[#FF4D6D]' : index === 6 ? 'text-[#00B4D8]' : 'text-slate-400'
               }`}
             >
@@ -210,10 +211,10 @@ export default function Calendar({
         </div>
 
         {/* 날짜 그리드 */}
-        <div className="grid grid-cols-7 gap-2 sm:gap-3">
+        <div className="grid grid-cols-7 gap-1 sm:gap-3">
           {calendarCells.map((day, index) => {
             if (day === null) {
-              return <div key={`blank-${index}`} className="aspect-square bg-slate-50/30 rounded-xl border border-dashed border-slate-100" />;
+              return <div key={`blank-${index}`} className="min-h-[64px] sm:aspect-square bg-slate-50/30 rounded-lg sm:rounded-xl border border-dashed border-slate-100" />;
             }
 
             const dateStr = formatDateString(day);
@@ -231,9 +232,9 @@ export default function Calendar({
               <button
                 key={`day-${day}`}
                 onClick={() => onSelectDate(dateStr)}
-                className={`aspect-square p-2 rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group cursor-pointer ${
+                className={`min-h-[68px] sm:min-h-0 sm:aspect-square p-1 sm:p-2 rounded-lg sm:rounded-xl border flex flex-col justify-between items-start text-left transition-all duration-150 relative group cursor-pointer ${
                   isSelected
-                    ? 'border-indigo-600 bg-indigo-50/40 ring-3 ring-indigo-500/10 scale-[1.02]'
+                    ? 'border-indigo-600 bg-indigo-50/40 ring-2 sm:ring-3 ring-indigo-500/10 scale-[1.01] sm:scale-[1.02]'
                     : isToday
                     ? 'border-indigo-200 bg-slate-50'
                     : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50/60'
@@ -243,19 +244,19 @@ export default function Calendar({
                 {/* 날짜 숫자 & 기록 완료 체크 아이콘 */}
                 <div className="flex items-center justify-between w-full">
                   <span
-                    className={`text-xs sm:text-sm font-bold ${
+                    className={`text-[11px] sm:text-sm font-black ${
                       isSelected ? 'text-indigo-600 font-extrabold' : dayColorClass
-                    } ${isToday ? 'bg-[#727CF5] text-white w-5.5 h-5.5 flex items-center justify-center rounded-full text-[11px]' : ''}`}
+                    } ${isToday ? 'bg-[#727CF5] text-white w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 flex items-center justify-center rounded-full text-[10px] sm:text-[11px]' : ''}`}
                   >
                     {day}
                   </span>
                   {hasRecord && (
-                    <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-50" />
+                    <CheckCircle2 size={12} className="text-emerald-500 fill-emerald-50 shrink-0" />
                   )}
                 </div>
 
                 {/* 그 날의 지도 학생 요약 */}
-                <div className="w-full mt-1.5 overflow-hidden flex flex-col gap-1 pointer-events-none">
+                <div className="w-full mt-1 overflow-hidden flex flex-col gap-0.5 sm:gap-1 pointer-events-none">
                   {record && record.studentIds.map(sid => {
                     const s = students.find(x => x.id === sid);
                     if (!s) return null;
@@ -270,11 +271,11 @@ export default function Calendar({
                     return (
                       <span 
                         key={sid} 
-                        className={`text-[11px] sm:text-[12px] px-1.5 py-0.5 rounded border leading-none truncate font-extrabold flex items-center justify-between gap-1 ${badgeColor}`}
+                        className={`text-[9px] sm:text-[12px] px-1 sm:px-1.5 py-0.5 rounded border leading-none truncate font-black flex items-center justify-between gap-0.5 ${badgeColor}`}
                       >
                         <span className="truncate">{s.name}</span>
                         {hours > 1 && (
-                          <span className="text-[10px] opacity-90 shrink-0 font-black">({hours}h)</span>
+                          <span className="text-[8px] sm:text-[10px] opacity-90 shrink-0 font-black">({hours}h)</span>
                         )}
                       </span>
                     );

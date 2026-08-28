@@ -50,8 +50,11 @@ const STORAGE_KEYS = {
   MAX_HOURS: 'edu_calendar_max_hours'
 };
 
+// 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
+export const CURRENT_DATA_VERSION = '2026-08-28-v12-production';
+
 // 초기 기본 학생 명단 (최신 8, 9월 데이터 반영)
-const INITIAL_STUDENTS: Student[] = [
+export const INITIAL_STUDENTS: Student[] = [
   { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() },
@@ -59,9 +62,9 @@ const INITIAL_STUDENTS: Student[] = [
   { id: 'student-5', name: '엄호준', group: '1순위', createdAt: new Date().toISOString() }
 ];
 
-// 초기 기본 지도 기록 (8월, 9월 최신 기록 및 누적 시수 31시간/26시간 완벽 반영)
-const INITIAL_RECORDS: TeachingRecord[] = [
-  // 1학기/7월 누적 시수 (중위권 10시간, 1순위 9시간)
+// 초기 기본 지도 기록 (8월, 9월 최신 기록 및 누적 시수 중위권 31시간, 1순위 26시간 완벽 반영)
+export const INITIAL_RECORDS: TeachingRecord[] = [
+  // 1학기 누적 시수 (중위권 10시간, 1순위 9시간)
   {
     id: '2026-07-07',
     date: '2026-07-07',
@@ -112,11 +115,11 @@ const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-1': '여름방학 전 학습 정리', 'student-2': '여름방학 전 학습 정리' }
   },
   {
-    id: '2026-07-29',
-    date: '2026-07-29',
-    studentIds: ['student-4'],
-    hours: { 'student-4': 2 },
-    notes: { 'student-4': '기초학력 개별 보충' }
+    id: '2026-07-30',
+    date: '2026-07-30',
+    studentIds: ['student-1', 'student-2'],
+    hours: { 'student-1': 2, 'student-2': 2 },
+    notes: { 'student-1': '1학기 최종 보충', 'student-2': '1학기 최종 보충' }
   },
 
   // 2026년 8월 최신 기록 (이미지 1 일치)
@@ -200,6 +203,26 @@ const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-3': '국어 및 수학 보충 지도 (4시간)' }
   }
 ];
+
+// 어떤 브라우저/기기에서든 기본 웹앱 주소로 접속 시 최신 데이터가 즉시 로드되도록 보장하는 자동 마이그레이션 함수
+export function ensureLatestDataVersion(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const version = localStorage.getItem('edu_calendar_data_version');
+    if (version !== CURRENT_DATA_VERSION) {
+      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(INITIAL_RECORDS));
+      localStorage.setItem('edu_calendar_max_hours_middle', '40');
+      localStorage.setItem('edu_calendar_max_hours_first', '40');
+      localStorage.setItem('edu_calendar_data_version', CURRENT_DATA_VERSION);
+    }
+  } catch (e) {
+    console.error('Failed to ensure data version:', e);
+  }
+}
+
+// 모듈 로딩 시 즉시 실행
+ensureLatestDataVersion();
 
 // URL 해시 및 파라미터에서 다른 기기 동기화 정보 자동 감지 및 등록
 export interface FullDataSnapshot {
@@ -398,6 +421,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
 
 // 로컬 캐시 즉시 반환 헬퍼 (0ms 렌더링용)
 export function getLocalStudents(): Student[] {
+  ensureLatestDataVersion();
   const local = localStorage.getItem(STORAGE_KEYS.STUDENTS);
   if (local) {
     try {
@@ -409,6 +433,7 @@ export function getLocalStudents(): Student[] {
 }
 
 export function getLocalRecords(): TeachingRecord[] {
+  ensureLatestDataVersion();
   const local = localStorage.getItem(STORAGE_KEYS.RECORDS);
   if (local) {
     try {
@@ -420,6 +445,7 @@ export function getLocalRecords(): TeachingRecord[] {
 }
 
 export function getLocalMaxHours(group: '중위권' | '1순위'): number {
+  ensureLatestDataVersion();
   const storageKey = group === '중위권' ? 'edu_calendar_max_hours_middle' : 'edu_calendar_max_hours_first';
   const local = localStorage.getItem(storageKey);
   return local ? parseInt(local, 10) : 40;
@@ -447,6 +473,17 @@ export async function fetchStudents(): Promise<Student[]> {
           saveStudents(INITIAL_STUDENTS).catch(console.error);
           return INITIAL_STUDENTS;
         }
+
+        // 최신 필수 학생(5명) 중 누락된 학생이 있다면 자동 병합
+        const existingIds = new Set(students.map(s => s.id));
+        const missingStudents = INITIAL_STUDENTS.filter(is => !existingIds.has(is.id));
+        if (missingStudents.length > 0) {
+          const merged = [...students, ...missingStudents];
+          saveStudents(merged).catch(console.error);
+          localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(merged));
+          return merged;
+        }
+
         // 로컬 캐시 동기화
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
         return students;
@@ -555,6 +592,16 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
         if (records.length === 0) {
           saveRecordsBatch(INITIAL_RECORDS).catch(console.error);
           return INITIAL_RECORDS;
+        }
+
+        // 8월/9월 등 최신 필수 지도 기록 중 누락된 날짜가 있다면 자동 병합 및 백업
+        const existingDates = new Set(records.map(r => r.date));
+        const missingRecords = INITIAL_RECORDS.filter(ir => !existingDates.has(ir.date));
+        if (missingRecords.length > 0) {
+          const merged = [...records, ...missingRecords];
+          saveRecordsBatch(missingRecords).catch(console.error);
+          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+          return merged;
         }
 
         // 로컬 캐시 동기화

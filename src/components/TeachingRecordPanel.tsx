@@ -116,22 +116,22 @@ export default function TeachingRecordPanel({
   const totalDayHours = currentStudentIds.reduce((sum, id) => sum + (currentHours[id] || 1), 0);
 
   return (
-    <div className="bg-white h-full rounded-2xl shadow-xl border border-slate-100 flex flex-col overflow-hidden" id="record-panel">
+    <div className="bg-white h-full rounded-2xl shadow-xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]" id="record-panel">
       {/* 패널 헤더 */}
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
         <div>
           <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">
+            <h2 className="text-base sm:text-xl font-black text-slate-800 tracking-tight">
               {formatDateKorean(selectedDate)}
             </h2>
             {currentStudentIds.length > 0 && (
-              <span className="bg-indigo-50 text-[#727CF5] font-black text-xs px-2.5 py-0.5 rounded-full border border-indigo-100 flex items-center space-x-1">
+              <span className="bg-indigo-50 text-[#727CF5] font-black text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full border border-indigo-100 flex items-center space-x-1">
                 <Clock size={11} className="stroke-[2.5]" />
                 <span>총 {currentStudentIds.length}명 · {totalDayHours}시간</span>
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mt-1">지도한 학생과 수업 시수(차시/시간)를 선택하세요.</p>
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">지도한 학생과 수업 시수를 선택하세요.</p>
         </div>
         <button
           onClick={onClose}
@@ -144,7 +144,7 @@ export default function TeachingRecordPanel({
       </div>
 
       {/* 패널 본문 (학생 선택 & 시수 설정 & 지도내용 작성) */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         
         {/* 일괄 시수 변경 툴바 (학생이 1명 이상 선택되었을 때 노출) */}
         {currentStudentIds.length > 0 && (
