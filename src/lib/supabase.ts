@@ -202,12 +202,98 @@ const INITIAL_RECORDS: TeachingRecord[] = [
 ];
 
 // URL 해시 및 파라미터에서 다른 기기 동기화 정보 자동 감지 및 등록
-export function checkAndApplySyncUrl(): boolean {
+export interface FullDataSnapshot {
+  version: number;
+  timestamp: string;
+  students: Student[];
+  records: TeachingRecord[];
+  maxHoursMiddle: number;
+  maxHoursFirst: number;
+  supabaseConfig?: {
+    url: string;
+    key: string;
+  };
+}
+
+// 전체 로컬 데이터 스냅샷 추출
+export function exportFullData(): FullDataSnapshot {
+  const students = getLocalStudents();
+  const records = getLocalRecords();
+  const maxHoursMiddle = getLocalMaxHours('중위권');
+  const maxHoursFirst = getLocalMaxHours('1순위');
+  const creds = getSupabaseCredentials();
+
+  return {
+    version: 1,
+    timestamp: new Date().toISOString(),
+    students,
+    records,
+    maxHoursMiddle,
+    maxHoursFirst,
+    supabaseConfig: creds.isValid ? { url: creds.url, key: creds.key } : undefined
+  };
+}
+
+// 스냅샷을 로컬 스토리지에 즉시 복원
+export function importFullData(snapshot: FullDataSnapshot): boolean {
+  if (!snapshot || !Array.isArray(snapshot.students) || !Array.isArray(snapshot.records)) {
+    return false;
+  }
   try {
-    if (typeof window === 'undefined') return false;
-    
-    // 1. URL Hash 체크 (#sync_sb=...)
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(snapshot.students));
+    localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(snapshot.records));
+    if (snapshot.maxHoursMiddle) {
+      localStorage.setItem('edu_calendar_max_hours_middle', String(snapshot.maxHoursMiddle));
+    }
+    if (snapshot.maxHoursFirst) {
+      localStorage.setItem('edu_calendar_max_hours_first', String(snapshot.maxHoursFirst));
+    }
+    if (snapshot.supabaseConfig?.url && snapshot.supabaseConfig?.key) {
+      localStorage.setItem('custom_supabase_url', snapshot.supabaseConfig.url.trim());
+      localStorage.setItem('custom_supabase_anon_key', snapshot.supabaseConfig.key.trim());
+      resetSupabaseClient();
+    }
+    return true;
+  } catch (e) {
+    console.error('Failed to import full data snapshot:', e);
+    return false;
+  }
+}
+
+// 노트북의 모든 최신 데이터를 포함하는 1초 완성 동기화 링크 생성
+export function generateDataSyncUrl(): string {
+  const snapshot = exportFullData();
+  const jsonStr = JSON.stringify(snapshot);
+  const token = btoa(encodeURIComponent(jsonStr));
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  return `${origin}${pathname}#sync_data=${token}`;
+}
+
+// URL 해시 및 파라미터에서 다른 기기 동기화 정보 자동 감지 및 등록
+export function checkAndApplySyncUrl(): { applied: boolean; message?: string; count?: number } {
+  try {
+    if (typeof window === 'undefined') return { applied: false };
+
+    // 1. 전체 데이터 스냅샷 해시 체크 (#sync_data=...)
     const hash = window.location.hash;
+    if (hash.includes('sync_data=')) {
+      const b64 = hash.split('sync_data=')[1].split('&')[0];
+      if (b64) {
+        const decoded = decodeURIComponent(atob(b64));
+        const snapshot: FullDataSnapshot = JSON.parse(decoded);
+        if (importFullData(snapshot)) {
+          window.history.replaceState(null, '', window.location.pathname);
+          return {
+            applied: true,
+            count: snapshot.records.length,
+            message: `🎉 노트북의 최신 데이터(학생 ${snapshot.students.length}명, 지도 기록 ${snapshot.records.length}일치)가 100% 완벽하게 동기화되었습니다!`
+          };
+        }
+      }
+    }
+
+    // 2. Supabase 자격증명 해시 체크 (#sync_sb=...)
     if (hash.includes('sync_sb=')) {
       const b64 = hash.split('sync_sb=')[1].split('&')[0];
       if (b64) {
@@ -217,15 +303,31 @@ export function checkAndApplySyncUrl(): boolean {
           localStorage.setItem('custom_supabase_url', url.trim());
           localStorage.setItem('custom_supabase_anon_key', key.trim());
           resetSupabaseClient();
-          // URL 정리
           window.history.replaceState(null, '', window.location.pathname);
-          return true;
+          return {
+            applied: true,
+            message: '✨ Supabase 클라우드가 자동으로 연결되어 실시간 동기화가 활성화되었습니다!'
+          };
         }
       }
     }
 
-    // 2. Query Params 체크 (?sb_url=...&sb_key=...)
+    // 3. Query Params 체크 (?sync_data=... or ?sb_url=...)
     const params = new URLSearchParams(window.location.search);
+    const qData = params.get('sync_data');
+    if (qData) {
+      const decoded = decodeURIComponent(atob(qData));
+      const snapshot: FullDataSnapshot = JSON.parse(decoded);
+      if (importFullData(snapshot)) {
+        window.history.replaceState(null, '', window.location.pathname);
+        return {
+          applied: true,
+          count: snapshot.records.length,
+          message: `🎉 노트북의 최신 데이터가 성공적으로 동기화되었습니다!`
+        };
+      }
+    }
+
     const qUrl = params.get('sb_url');
     const qKey = params.get('sb_key');
     if (qUrl && qKey) {
@@ -233,15 +335,18 @@ export function checkAndApplySyncUrl(): boolean {
       localStorage.setItem('custom_supabase_anon_key', qKey.trim());
       resetSupabaseClient();
       window.history.replaceState(null, '', window.location.pathname);
-      return true;
+      return {
+        applied: true,
+        message: '✨ Supabase 클라우드가 연결되었습니다!'
+      };
     }
   } catch (e) {
     console.error('Failed to parse sync token from URL:', e);
   }
-  return false;
+  return { applied: false };
 }
 
-// 모든 기기 원클릭 동기화 링크 생성
+// 모든 기기 Supabase 설정 링크 생성
 export function generateSyncUrl(): string {
   const { url, key, isValid } = getSupabaseCredentials();
   if (!isValid || !url || !key) return '';

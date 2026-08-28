@@ -8,7 +8,8 @@ import {
   Users,
   CheckCircle2,
   HelpCircle,
-  CloudLightning
+  CloudLightning,
+  Share2
 } from 'lucide-react';
 import { Student, TeachingRecord } from './types';
 import { 
@@ -32,6 +33,7 @@ import Calendar from './components/Calendar';
 import TeachingRecordPanel from './components/TeachingRecordPanel';
 import SettingsPanel from './components/SettingsPanel';
 import Dashboard from './components/Dashboard';
+import SyncModal from './components/SyncModal';
 
 export default function App() {
   // 1. 핵심 데이터 상태 (로컬 캐시에서 0ms 즉시 초기화)
@@ -44,6 +46,7 @@ export default function App() {
   // 2. UI 상태 관리
   const [activeTab, setActiveTab] = useState<'calendar' | 'dashboard'>('calendar');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isSupabaseEnabled, setIsSupabaseEnabled] = useState<boolean>(() => getSupabaseCredentials().isValid);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState<boolean>(false);
@@ -85,10 +88,15 @@ export default function App() {
 
   // 초기 로드 시 동기화 토큰 확인 및 데이터 로드 + 실시간 WebSocket 구독 + 창 포커스 시 자동 갱신
   useEffect(() => {
-    const applied = checkAndApplySyncUrl();
-    if (applied) {
-      setSyncNotice('✨ 클라우드(Supabase) 연동 설정이 자동으로 완료되어 모든 기기와 동기화되었습니다!');
-      setTimeout(() => setSyncNotice(null), 5000);
+    const result = checkAndApplySyncUrl();
+    if (result.applied) {
+      setSyncNotice(result.message || '🎉 노트북의 최신 데이터가 성공적으로 동기화되었습니다!');
+      // 즉시 로컬 캐시에서 상태 리로드
+      setStudents(getLocalStudents());
+      setRecords(getLocalRecords());
+      setMaxHoursMiddle(getLocalMaxHours('중위권'));
+      setMaxHoursFirst(getLocalMaxHours('1순위'));
+      setTimeout(() => setSyncNotice(null), 6000);
     }
 
     const creds = getSupabaseCredentials();
@@ -193,11 +201,23 @@ export default function App() {
         </div>
 
         {/* 탭 컨트롤러 & 클라우드 상태 */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           
+          {/* 기기 간 동기화 센터 오픈 버튼 */}
+          <button
+            onClick={() => setIsSyncModalOpen(true)}
+            className="px-3 py-2 bg-gradient-to-r from-[#727CF5] to-[#5C66E4] hover:from-[#5C66E4] hover:to-[#4A53D4] text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition-all cursor-pointer animate-pulse-subtle"
+            title="다른 브라우저 / 기기 즉시 동기화"
+            id="btn-open-sync-hub"
+          >
+            <Share2 size={14} />
+            <span className="hidden sm:inline">기기 간 데이터 동기화</span>
+            <span className="sm:hidden">동기화</span>
+          </button>
+
           {/* 수동 동기화/새로고침 버튼 */}
           <button
-            onClick={loadAllData}
+            onClick={() => loadAllData(false)}
             disabled={isSyncing}
             className="p-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-500 rounded-xl border border-slate-100 transition-colors cursor-pointer"
             title="실시간 새로고침 및 수동 동기화"
@@ -254,20 +274,33 @@ export default function App() {
         </div>
       </header>
 
+      {/* 동기화 성공 알림 바 */}
+      {syncNotice && (
+        <div className="bg-emerald-500 text-white px-6 py-2.5 flex items-center justify-between text-xs font-bold shadow-md animate-fade-in z-20">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 size={16} />
+            <span>{syncNotice}</span>
+          </div>
+          <button onClick={() => setSyncNotice(null)} className="text-white/80 hover:text-white cursor-pointer font-extrabold">
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* 실시간 백업 보증용 고수준 안내창 */}
-      {!isSupabaseEnabled && (
+      {!isSupabaseEnabled && !syncNotice && (
         <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <CloudLightning size={14} className="text-[#727CF5]" />
             <p className="text-[11px] text-indigo-950 font-bold leading-none">
-              현재 기기에만 저장되는 로컬 모드입니다. 다른 PC와 동기화하려면 우측 상단 ⚙️ 설정을 눌러 Supabase 클라우드를 연동하세요!
+              다른 PC/스마트폰과 데이터를 일치시키려면 상단 <b>[기기 간 데이터 동기화]</b> 버튼을 눌러 링크를 복사하세요!
             </p>
           </div>
           <button 
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={() => setIsSyncModalOpen(true)}
             className="text-[10px] text-[#727CF5] font-black hover:underline leading-none cursor-pointer"
           >
-            지금 연동하기 &rarr;
+            동기화 링크 복사 &rarr;
           </button>
         </div>
       )}
@@ -321,6 +354,25 @@ export default function App() {
             />
           </div>
         )}
+
+        {/* 기기 간 동기화 센터 모달 */}
+        <SyncModal
+          isOpen={isSyncModalOpen}
+          onClose={() => setIsSyncModalOpen(false)}
+          onDataImported={() => {
+            setStudents(getLocalStudents());
+            setRecords(getLocalRecords());
+            setMaxHoursMiddle(getLocalMaxHours('중위권'));
+            setMaxHoursFirst(getLocalMaxHours('1순위'));
+            loadAllData(true);
+          }}
+          onOpenSettings={() => {
+            setIsSyncModalOpen(false);
+            setIsSettingsOpen(true);
+          }}
+          studentsCount={students.length}
+          recordsCount={records.length}
+        />
 
         {/* 중앙 지도 기록 모달 팝업 */}
         {isRecordModalOpen && selectedDate && (
