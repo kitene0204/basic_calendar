@@ -204,14 +204,35 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
         .select('*');
       
       if (!error && data) {
-        const records: TeachingRecord[] = data.map(item => ({
-          id: item.date, // date를 id로도 취급
-          date: item.date,
-          studentIds: Array.isArray(item.student_ids) ? item.student_ids : JSON.parse(item.student_ids || '[]'),
-          hours: typeof item.hours === 'object' && item.hours !== null ? item.hours : (typeof item.hours === 'string' && item.hours ? JSON.parse(item.hours) : {}),
-          notes: typeof item.notes === 'object' && item.notes !== null ? item.notes : JSON.parse(item.notes || '{}'),
-          updatedAt: item.updated_at
-        }));
+        const records: TeachingRecord[] = data.map(item => {
+          const rawNotes = typeof item.notes === 'object' && item.notes !== null 
+            ? item.notes 
+            : JSON.parse(item.notes || '{}');
+
+          // hours 필드가 DB 컬럼에 있으면 사용, 없으면 notes.__HOURS_BACKUP__에서 복원
+          let parsedHours: Record<string, number> = {};
+          if (typeof item.hours === 'object' && item.hours !== null && Object.keys(item.hours).length > 0) {
+            parsedHours = item.hours;
+          } else if (typeof item.hours === 'string' && item.hours && item.hours !== '{}') {
+            try { parsedHours = JSON.parse(item.hours); } catch (_) {}
+          } else if (rawNotes.__HOURS_BACKUP__) {
+            try { parsedHours = JSON.parse(rawNotes.__HOURS_BACKUP__); } catch (_) {}
+          }
+
+          // UI에 노출되는 메모에서는 시스템 백업 키 제외
+          const cleanNotes: Record<string, string> = { ...rawNotes };
+          delete cleanNotes.__HOURS_BACKUP__;
+
+          return {
+            id: item.date, // date를 id로도 취급
+            date: item.date,
+            studentIds: Array.isArray(item.student_ids) ? item.student_ids : JSON.parse(item.student_ids || '[]'),
+            hours: parsedHours,
+            notes: cleanNotes,
+            updatedAt: item.updated_at
+          };
+        });
+
         // 로컬 캐시 동기화
         localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
         return records;
@@ -230,36 +251,63 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
 
 // 4. 기록 저장(단일 일자 업서트)
 export async function saveRecord(record: TeachingRecord): Promise<boolean> {
-  // 로컬 저장
+  const currentHours = record.hours || {};
+  
+  // DB의 hours 컬럼 존재 유무에 상관없이 100% 안전하게 보존하기 위해 notes 내부에 __HOURS_BACKUP__을 병합
+  const notesWithBackup = {
+    ...record.notes,
+    __HOURS_BACKUP__: JSON.stringify(currentHours)
+  };
+
+  // 로컬 저장 (클라이언트 상태 동기화)
   const localRecords = await fetchRecords();
+  const cleanRecord: TeachingRecord = {
+    ...record,
+    hours: currentHours
+  };
   const existingIndex = localRecords.findIndex(r => r.date === record.date);
   if (existingIndex >= 0) {
-    localRecords[existingIndex] = record;
+    localRecords[existingIndex] = cleanRecord;
   } else {
-    localRecords.push(record);
+    localRecords.push(cleanRecord);
   }
   localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(localRecords));
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client
+      // 1차 시도: hours 컬럼을 포함하여 업서트
+      const { error: upsertError } = await client
         .from('records')
         .upsert({
           date: record.date,
           student_ids: record.studentIds,
-          hours: record.hours || {},
-          notes: record.notes,
+          hours: currentHours,
+          notes: notesWithBackup,
           updated_at: new Date().toISOString()
         }, { onConflict: 'date' });
 
-      if (error) {
-        console.error('Supabase record upsert error:', error);
-        return false;
+      if (upsertError) {
+        console.warn('Supabase record upsert with hours column failed, retrying with notes-backup fallback:', upsertError.message);
+        
+        // 2차 시도 (Fallback): DB에 hours 컬럼이 아직 없는 경우 hours 컬럼을 제외하고 notes 백업으로 저장
+        const { error: fallbackError } = await client
+          .from('records')
+          .upsert({
+            date: record.date,
+            student_ids: record.studentIds,
+            notes: notesWithBackup,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'date' });
+
+        if (fallbackError) {
+          console.error('Supabase fallback record upsert failed:', fallbackError);
+          return false;
+        }
       }
       return true;
     } catch (e) {
-      console.error('Supabase record upsert failed:', e);
+      console.error('Supabase record upsert exception:', e);
       return false;
     }
   }
