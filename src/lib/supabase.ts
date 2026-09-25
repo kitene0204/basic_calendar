@@ -436,16 +436,16 @@ export function generateSyncUrl(): string {
 // SQL 생성 가이드 제공을 위한 스키마 스크립트
 export const SUPABASE_SQL_SETUP = `-- Supabase SQL Editor에 복사해서 붙여넣고 실행하세요!
 
--- 1. 학생(students) 테이블 생성
-CREATE TABLE IF NOT EXISTS students (
+-- 1. 학생(basic_students) 테이블 생성
+CREATE TABLE IF NOT EXISTS basic_students (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   "group" TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. 지도 기록(records) 테이블 생성 (hours 시수 컬럼 지원)
-CREATE TABLE IF NOT EXISTS records (
+-- 2. 지도 기록(basic_records) 테이블 생성 (hours 시수 컬럼 지원)
+CREATE TABLE IF NOT EXISTS basic_records (
   date TEXT PRIMARY KEY, -- YYYY-MM-DD
   student_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
   hours JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -454,23 +454,23 @@ CREATE TABLE IF NOT EXISTS records (
 );
 
 -- 기존 테이블에 hours 컬럼이 없는 경우를 위한 마이그레이션 구문
-ALTER TABLE records ADD COLUMN IF NOT EXISTS hours JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE basic_records ADD COLUMN IF NOT EXISTS hours JSONB NOT NULL DEFAULT '{}'::jsonb;
 
--- 3. 설정(settings) 테이블 생성
-CREATE TABLE IF NOT EXISTS settings (
+-- 3. 설정(basic_settings) 테이블 생성
+CREATE TABLE IF NOT EXISTS basic_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
 
 -- Row Level Security (RLS) 활성화 (필요한 경우 활성화하고 정책 생성)
 -- 테스트 목적으로는 RLS를 끄거나 모두 허용(public)으로 두면 간편합니다.
-ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE basic_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE basic_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE basic_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read/write" ON students FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public read/write" ON records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write" ON basic_students FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write" ON basic_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write" ON basic_settings FOR ALL USING (true) WITH CHECK (true);
 `;
 
 // 로컬 캐시 즉시 반환 헬퍼 (0ms 렌더링용)
@@ -511,7 +511,7 @@ export async function fetchStudents(): Promise<Student[]> {
   if (client) {
     try {
       const { data, error } = await client
-        .from('students')
+        .from('basic_students')
         .select('*')
         .order('name', { ascending: true });
       
@@ -566,7 +566,7 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
       }));
 
       const { error } = await client
-        .from('students')
+        .from('basic_students')
         .upsert(upsertData, { onConflict: 'id' });
 
       if (error) {
@@ -588,7 +588,7 @@ export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
   if (client) {
     try {
       const { error } = await client
-        .from('students')
+        .from('basic_students')
         .delete()
         .eq('id', studentId);
       if (error) {
@@ -609,7 +609,7 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
   if (client) {
     try {
       const { data, error } = await client
-        .from('records')
+        .from('basic_records')
         .select('*');
       
       if (!error && data) {
@@ -698,7 +698,7 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
   if (client) {
     try {
       const { error: upsertError } = await client
-        .from('records')
+        .from('basic_records')
         .upsert({
           date: record.date,
           student_ids: record.studentIds,
@@ -710,7 +710,7 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
       if (upsertError) {
         // Fallback: hours 컬럼이 없는 테이블인 경우
         await client
-          .from('records')
+          .from('basic_records')
           .upsert({
             date: record.date,
             student_ids: record.studentIds,
@@ -750,7 +750,7 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
       });
 
       const { error } = await client
-        .from('records')
+        .from('basic_records')
         .upsert(batchPayload, { onConflict: 'date' });
 
       if (error) {
@@ -759,7 +759,7 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
           const { hours, ...rest } = p;
           return rest;
         });
-        await client.from('records').upsert(fallbackPayload, { onConflict: 'date' });
+        await client.from('basic_records').upsert(fallbackPayload, { onConflict: 'date' });
       }
       return true;
     } catch (e) {
@@ -780,7 +780,7 @@ export async function fetchMaxHours(group: '중위권' | '1순위'): Promise<num
   if (client) {
     try {
       const { data, error } = await client
-        .from('settings')
+        .from('basic_settings')
         .select('value')
         .eq('key', keyName)
         .single();
@@ -808,7 +808,7 @@ export async function saveMaxHours(group: '중위권' | '1순위', hours: number
   if (client) {
     try {
       await client
-        .from('settings')
+        .from('basic_settings')
         .upsert({
           key: keyName,
           value: hours.toString()
@@ -857,13 +857,13 @@ export function subscribeToRealtimeChanges(onRemoteChange: () => void): () => vo
   try {
     const channel = client
       .channel('edu_calendar_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'records' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'basic_records' }, () => {
         onRemoteChange();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'basic_students' }, () => {
         onRemoteChange();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'basic_settings' }, () => {
         onRemoteChange();
       })
       .subscribe();
