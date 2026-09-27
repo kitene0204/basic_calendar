@@ -339,7 +339,7 @@ export function checkAndApplySyncUrl(): { applied: boolean; message?: string; co
           return {
             applied: true,
             count: snapshot.records.length,
-            message: `🎉 노트북의 최신 데이터(학생 ${snapshot.students.length}명, 지도 기록 ${snapshot.records.length}일치)가 100% 완벽하게 동기화되었습니다!`
+            message: `🎉 노트북의 최신 데이터가 100% 완벽하게 동기화되었습니다!`
           };
         }
       }
@@ -413,6 +413,9 @@ export function getLocalMaxHours(group: '중위권' | '1순위'): number {
   return local ? parseInt(local, 10) : 40;
 }
 
+// ----------------------------------------------------
+// [수정 핵심] 좀비 자동 복구 방지
+// ----------------------------------------------------
 export async function fetchStudents(): Promise<Student[]> {
   const client = getSupabaseClient();
   if (client) {
@@ -429,19 +432,14 @@ export async function fetchStudents(): Promise<Student[]> {
           group: item.group as '중위권' | '1순위' | '기타',
           createdAt: item.created_at
         }));
+        
+        // 데이터가 DB에 아예 0명일 때만 초기 세팅 동작
         if (students.length === 0) {
           saveStudents(INITIAL_STUDENTS).catch(console.error);
           return INITIAL_STUDENTS;
         }
 
-        const existingIds = new Set(students.map(s => s.id));
-        const missingStudents = INITIAL_STUDENTS.filter(is => !existingIds.has(is.id));
-        if (missingStudents.length > 0) {
-          const merged = [...students, ...missingStudents];
-          saveStudents(merged).catch(console.error);
-          localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(merged));
-          return merged;
-        }
+        // --- 좀비 부활 코드 삭제 완료 ---
 
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
         return students;
@@ -484,7 +482,12 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
   return true;
 }
 
+// 삭제 시 로컬 캐시에서도 즉시 삭제하도록 수정
 export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
+  // 1. 로컬에서 즉시 삭제 반영
+  const localStudents = getLocalStudents().filter(s => s.id !== studentId);
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(localStudents));
+
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -504,6 +507,9 @@ export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
   return true;
 }
 
+// ----------------------------------------------------
+// [수정 핵심] 좀비 자동 복구 방지 (일지 기록)
+// ----------------------------------------------------
 export async function fetchRecords(): Promise<TeachingRecord[]> {
   const client = getSupabaseClient();
   if (client) {
@@ -540,19 +546,13 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
           };
         });
 
+        // 데이터가 DB에 아예 0개일 때만 초기 세팅 동작
         if (records.length === 0) {
           saveRecordsBatch(INITIAL_RECORDS).catch(console.error);
           return INITIAL_RECORDS;
         }
 
-        const existingDates = new Set(records.map(r => r.date));
-        const missingRecords = INITIAL_RECORDS.filter(ir => !existingDates.has(ir.date));
-        if (missingRecords.length > 0) {
-          const merged = [...records, ...missingRecords];
-          saveRecordsBatch(missingRecords).catch(console.error);
-          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
-          return merged;
-        }
+        // --- 좀비 부활 코드 삭제 완료 ---
 
         localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
         return records;
