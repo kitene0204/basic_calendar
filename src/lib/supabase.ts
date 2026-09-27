@@ -1,39 +1,31 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Student, TeachingRecord } from '../types';
 
+// ============================================================================
+// [통합 portal 프로젝트 설정] 무조건 이 주소와 키를 사용하여 연결하도록 강제 설정
+// ============================================================================
+const PORTAL_URL = 'https://lqajnsqoovngfgabalkj.supabase.co';
+const PORTAL_ANON_KEY = 'sb_publishable_DcAlnHgLYSd92ICS66z3RA_DvrzyPhX';
+
 let supabaseInstance: SupabaseClient | null = null;
 
-// 로컬스토리지에서 사용자 지정 Supabase 설정 로드
+// 로컬스토리지 무시하고 portal 값 강제 리턴
 export function getSupabaseCredentials() {
-  const localUrl = localStorage.getItem('custom_supabase_url') || (import.meta as any).env.VITE_SUPABASE_URL || '';
-  const localKey = localStorage.getItem('custom_supabase_anon_key') || (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
-  
-  // placeholder 형식의 더미 값들 필터링
-  const isValidUrl = localUrl && localUrl.startsWith('http') && !localUrl.includes('your-project');
-  const isValidKey = localKey && localKey.length > 20 && !localKey.includes('your-anon-key');
-
-  if (isValidUrl && isValidKey) {
-    return { url: localUrl, key: localKey, isValid: true };
-  }
-  return { url: localUrl, key: localKey, isValid: false };
+  return { url: PORTAL_URL, key: PORTAL_ANON_KEY, isValid: true };
 }
 
 export function getSupabaseClient(): SupabaseClient | null {
   if (supabaseInstance) return supabaseInstance;
 
-  const { url, key, isValid } = getSupabaseCredentials();
-  if (isValid) {
-    try {
-      supabaseInstance = createClient(url, key, {
-        auth: { persistSession: true }
-      });
-      return supabaseInstance;
-    } catch (e) {
-      console.error('Supabase Client initialization failed:', e);
-      return null;
-    }
+  try {
+    supabaseInstance = createClient(PORTAL_URL, PORTAL_ANON_KEY, {
+      auth: { persistSession: true }
+    });
+    return supabaseInstance;
+  } catch (e) {
+    console.error('Supabase Client initialization failed:', e);
+    return null;
   }
-  return null;
 }
 
 export function resetSupabaseClient() {
@@ -50,10 +42,8 @@ const STORAGE_KEYS = {
   MAX_HOURS: 'edu_calendar_max_hours'
 };
 
-// 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
 export const CURRENT_DATA_VERSION = '2026-08-28-v15-exact-middle-and-first-logs';
 
-// 초기 기본 학생 명단 (실제 운영 일지 기준 100% 일치)
 export const INITIAL_STUDENTS: Student[] = [
   { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
@@ -63,7 +53,6 @@ export const INITIAL_STUDENTS: Student[] = [
   { id: 'student-4', name: '강주연', group: '1순위', createdAt: new Date().toISOString() }
 ];
 
-// 초기 기본 지도 기록 (중위권 35차시[남은 5차시], 1순위 27차시[남은 13차시] 실제 일지 100% 일치 반영)
 export const INITIAL_RECORDS: TeachingRecord[] = [
   // ================= 5월 (1순위 4차시) =================
   {
@@ -258,7 +247,6 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
   }
 ];
 
-// 어떤 브라우저/기기에서든 기본 웹앱 주소로 접속 시 최신 데이터가 즉시 로드되도록 보장하는 자동 마이그레이션 함수
 export function ensureLatestDataVersion(): void {
   if (typeof window === 'undefined') return;
   try {
@@ -275,10 +263,8 @@ export function ensureLatestDataVersion(): void {
   }
 }
 
-// 모듈 로딩 시 즉시 실행
 ensureLatestDataVersion();
 
-// URL 해시 및 파라미터에서 다른 기기 동기화 정보 자동 감지 및 등록
 export interface FullDataSnapshot {
   version: number;
   timestamp: string;
@@ -292,13 +278,11 @@ export interface FullDataSnapshot {
   };
 }
 
-// 전체 로컬 데이터 스냅샷 추출
 export function exportFullData(): FullDataSnapshot {
   const students = getLocalStudents();
   const records = getLocalRecords();
   const maxHoursMiddle = getLocalMaxHours('중위권');
   const maxHoursFirst = getLocalMaxHours('1순위');
-  const creds = getSupabaseCredentials();
 
   return {
     version: 1,
@@ -307,11 +291,10 @@ export function exportFullData(): FullDataSnapshot {
     records,
     maxHoursMiddle,
     maxHoursFirst,
-    supabaseConfig: creds.isValid ? { url: creds.url, key: creds.key } : undefined
+    supabaseConfig: { url: PORTAL_URL, key: PORTAL_ANON_KEY }
   };
 }
 
-// 스냅샷을 로컬 스토리지에 즉시 복원
 export function importFullData(snapshot: FullDataSnapshot): boolean {
   if (!snapshot || !Array.isArray(snapshot.students) || !Array.isArray(snapshot.records)) {
     return false;
@@ -325,11 +308,6 @@ export function importFullData(snapshot: FullDataSnapshot): boolean {
     if (snapshot.maxHoursFirst) {
       localStorage.setItem('edu_calendar_max_hours_first', String(snapshot.maxHoursFirst));
     }
-    if (snapshot.supabaseConfig?.url && snapshot.supabaseConfig?.key) {
-      localStorage.setItem('custom_supabase_url', snapshot.supabaseConfig.url.trim());
-      localStorage.setItem('custom_supabase_anon_key', snapshot.supabaseConfig.key.trim());
-      resetSupabaseClient();
-    }
     return true;
   } catch (e) {
     console.error('Failed to import full data snapshot:', e);
@@ -337,7 +315,6 @@ export function importFullData(snapshot: FullDataSnapshot): boolean {
   }
 }
 
-// 노트북의 모든 최신 데이터를 포함하는 1초 완성 동기화 링크 생성
 export function generateDataSyncUrl(): string {
   const snapshot = exportFullData();
   const jsonStr = JSON.stringify(snapshot);
@@ -347,12 +324,10 @@ export function generateDataSyncUrl(): string {
   return `${origin}${pathname}#sync_data=${token}`;
 }
 
-// URL 해시 및 파라미터에서 다른 기기 동기화 정보 자동 감지 및 등록
 export function checkAndApplySyncUrl(): { applied: boolean; message?: string; count?: number } {
   try {
     if (typeof window === 'undefined') return { applied: false };
 
-    // 1. 전체 데이터 스냅샷 해시 체크 (#sync_data=...)
     const hash = window.location.hash;
     if (hash.includes('sync_data=')) {
       const b64 = hash.split('sync_data=')[1].split('&')[0];
@@ -370,26 +345,14 @@ export function checkAndApplySyncUrl(): { applied: boolean; message?: string; co
       }
     }
 
-    // 2. Supabase 자격증명 해시 체크 (#sync_sb=...)
     if (hash.includes('sync_sb=')) {
-      const b64 = hash.split('sync_sb=')[1].split('&')[0];
-      if (b64) {
-        const decoded = decodeURIComponent(atob(b64));
-        const [url, key] = decoded.split('|');
-        if (url && key) {
-          localStorage.setItem('custom_supabase_url', url.trim());
-          localStorage.setItem('custom_supabase_anon_key', key.trim());
-          resetSupabaseClient();
-          window.history.replaceState(null, '', window.location.pathname);
-          return {
-            applied: true,
-            message: '✨ Supabase 클라우드가 자동으로 연결되어 실시간 동기화가 활성화되었습니다!'
-          };
-        }
-      }
+      window.history.replaceState(null, '', window.location.pathname);
+      return {
+        applied: true,
+        message: '✨ Supabase 클라우드가 자동으로 연결되어 실시간 동기화가 활성화되었습니다!'
+      };
     }
 
-    // 3. Query Params 체크 (?sync_data=... or ?sb_url=...)
     const params = new URLSearchParams(window.location.search);
     const qData = params.get('sync_data');
     if (qData) {
@@ -404,76 +367,21 @@ export function checkAndApplySyncUrl(): { applied: boolean; message?: string; co
         };
       }
     }
-
-    const qUrl = params.get('sb_url');
-    const qKey = params.get('sb_key');
-    if (qUrl && qKey) {
-      localStorage.setItem('custom_supabase_url', qUrl.trim());
-      localStorage.setItem('custom_supabase_anon_key', qKey.trim());
-      resetSupabaseClient();
-      window.history.replaceState(null, '', window.location.pathname);
-      return {
-        applied: true,
-        message: '✨ Supabase 클라우드가 연결되었습니다!'
-      };
-    }
   } catch (e) {
     console.error('Failed to parse sync token from URL:', e);
   }
   return { applied: false };
 }
 
-// 모든 기기 Supabase 설정 링크 생성
 export function generateSyncUrl(): string {
-  const { url, key, isValid } = getSupabaseCredentials();
-  if (!isValid || !url || !key) return '';
-  const token = btoa(encodeURIComponent(`${url}|${key}`));
+  const token = btoa(encodeURIComponent(`${PORTAL_URL}|${PORTAL_ANON_KEY}`));
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
   return `${origin}${pathname}#sync_sb=${token}`;
 }
 
-// SQL 생성 가이드 제공을 위한 스키마 스크립트
-export const SUPABASE_SQL_SETUP = `-- Supabase SQL Editor에 복사해서 붙여넣고 실행하세요!
+export const SUPABASE_SQL_SETUP = `-- 생략 (이미 위에서 생성 완료)`;
 
--- 1. 학생(basic_students) 테이블 생성
-CREATE TABLE IF NOT EXISTS basic_students (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  "group" TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 2. 지도 기록(basic_records) 테이블 생성 (hours 시수 컬럼 지원)
-CREATE TABLE IF NOT EXISTS basic_records (
-  date TEXT PRIMARY KEY, -- YYYY-MM-DD
-  student_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
-  hours JSONB NOT NULL DEFAULT '{}'::jsonb,
-  notes JSONB NOT NULL DEFAULT '{}'::jsonb,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 기존 테이블에 hours 컬럼이 없는 경우를 위한 마이그레이션 구문
-ALTER TABLE basic_records ADD COLUMN IF NOT EXISTS hours JSONB NOT NULL DEFAULT '{}'::jsonb;
-
--- 3. 설정(basic_settings) 테이블 생성
-CREATE TABLE IF NOT EXISTS basic_settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-
--- Row Level Security (RLS) 활성화 (필요한 경우 활성화하고 정책 생성)
--- 테스트 목적으로는 RLS를 끄거나 모두 허용(public)으로 두면 간편합니다.
-ALTER TABLE basic_students ENABLE ROW LEVEL SECURITY;
-ALTER TABLE basic_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE basic_settings ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read/write" ON basic_students FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public read/write" ON basic_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public read/write" ON basic_settings FOR ALL USING (true) WITH CHECK (true);
-`;
-
-// 로컬 캐시 즉시 반환 헬퍼 (0ms 렌더링용)
 export function getLocalStudents(): Student[] {
   ensureLatestDataVersion();
   const local = localStorage.getItem(STORAGE_KEYS.STUDENTS);
@@ -505,7 +413,6 @@ export function getLocalMaxHours(group: '중위권' | '1순위'): number {
   return local ? parseInt(local, 10) : 40;
 }
 
-// 1. 학생 데이터 가져오기
 export async function fetchStudents(): Promise<Student[]> {
   const client = getSupabaseClient();
   if (client) {
@@ -522,13 +429,11 @@ export async function fetchStudents(): Promise<Student[]> {
           group: item.group as '중위권' | '1순위' | '기타',
           createdAt: item.created_at
         }));
-        // Supabase에 데이터가 비어 있으면 로컬 기본값을 업서트하고 반환
         if (students.length === 0) {
           saveStudents(INITIAL_STUDENTS).catch(console.error);
           return INITIAL_STUDENTS;
         }
 
-        // 최신 필수 학생(5명) 중 누락된 학생이 있다면 자동 병합
         const existingIds = new Set(students.map(s => s.id));
         const missingStudents = INITIAL_STUDENTS.filter(is => !existingIds.has(is.id));
         if (missingStudents.length > 0) {
@@ -538,7 +443,6 @@ export async function fetchStudents(): Promise<Student[]> {
           return merged;
         }
 
-        // 로컬 캐시 동기화
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
         return students;
       }
@@ -550,9 +454,7 @@ export async function fetchStudents(): Promise<Student[]> {
   return getLocalStudents();
 }
 
-// 2. 학생 데이터 저장(업서트)
 export async function saveStudents(students: Student[]): Promise<boolean> {
-  // 로컬 우선 즉시 저장
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
 
   const client = getSupabaseClient();
@@ -582,7 +484,6 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
   return true;
 }
 
-// 2-1. 학생 단일 삭제
 export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
   const client = getSupabaseClient();
   if (client) {
@@ -603,7 +504,6 @@ export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
   return true;
 }
 
-// 3. 기록 가져오기
 export async function fetchRecords(): Promise<TeachingRecord[]> {
   const client = getSupabaseClient();
   if (client) {
@@ -618,7 +518,6 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
             ? item.notes 
             : JSON.parse(item.notes || '{}');
 
-          // hours 필드가 DB 컬럼에 있으면 사용, 없으면 notes.__HOURS_BACKUP__에서 복원
           let parsedHours: Record<string, number> = {};
           if (typeof item.hours === 'object' && item.hours !== null && Object.keys(item.hours).length > 0) {
             parsedHours = item.hours;
@@ -628,7 +527,6 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
             try { parsedHours = JSON.parse(rawNotes.__HOURS_BACKUP__); } catch (_) {}
           }
 
-          // UI에 노출되는 메모에서는 시스템 백업 키 제외
           const cleanNotes: Record<string, string> = { ...rawNotes };
           delete cleanNotes.__HOURS_BACKUP__;
 
@@ -642,13 +540,11 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
           };
         });
 
-        // Supabase에 데이터가 비어 있으면 최신 초기 기록을 업서트하고 반환
         if (records.length === 0) {
           saveRecordsBatch(INITIAL_RECORDS).catch(console.error);
           return INITIAL_RECORDS;
         }
 
-        // 8월/9월 등 최신 필수 지도 기록 중 누락된 날짜가 있다면 자동 병합 및 백업
         const existingDates = new Set(records.map(r => r.date));
         const missingRecords = INITIAL_RECORDS.filter(ir => !existingDates.has(ir.date));
         if (missingRecords.length > 0) {
@@ -658,7 +554,6 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
           return merged;
         }
 
-        // 로컬 캐시 동기화
         localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
         return records;
       }
@@ -670,17 +565,14 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
   return getLocalRecords();
 }
 
-// 4. 단일 기록 초고속 저장 (로컬 즉시 반영 + 비동기 원격 업서트)
 export async function saveRecord(record: TeachingRecord): Promise<boolean> {
   const currentHours = record.hours || {};
   
-  // DB의 hours 컬럼 존재 유무에 상관없이 100% 안전하게 보존하기 위해 notes 내부에 __HOURS_BACKUP__을 병합
   const notesWithBackup = {
     ...record.notes,
     __HOURS_BACKUP__: JSON.stringify(currentHours)
   };
 
-  // 로컬 캐시 즉시 업데이트 (O(1) 속도)
   const local = getLocalRecords();
   const cleanRecord: TeachingRecord = {
     ...record,
@@ -708,7 +600,6 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
         }, { onConflict: 'date' });
 
       if (upsertError) {
-        // Fallback: hours 컬럼이 없는 테이블인 경우
         await client
           .from('basic_records')
           .upsert({
@@ -727,7 +618,6 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
   return true;
 }
 
-// 4-1. 여러 기록 초고속 일괄 배치 저장 (1번의 HTTP 호출로 0.1초 동기화)
 export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<boolean> {
   localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(recordsList));
 
@@ -754,7 +644,6 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
         .upsert(batchPayload, { onConflict: 'date' });
 
       if (error) {
-        // Fallback if hours column not yet migrated
         const fallbackPayload = batchPayload.map(p => {
           const { hours, ...rest } = p;
           return rest;
@@ -770,13 +659,11 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
   return true;
 }
 
-// 5. 최대 지도 시수 로드
 export async function fetchMaxHours(group: '중위권' | '1순위'): Promise<number> {
   const client = getSupabaseClient();
   const keyName = group === '중위권' ? 'max_hours_middle' : 'max_hours_first';
   const storageKey = group === '중위권' ? 'edu_calendar_max_hours_middle' : 'edu_calendar_max_hours_first';
-  const defaultVal = 40;
-
+  
   if (client) {
     try {
       const { data, error } = await client
@@ -798,7 +685,6 @@ export async function fetchMaxHours(group: '중위권' | '1순위'): Promise<num
   return getLocalMaxHours(group);
 }
 
-// 6. 최대 지도 시수 저장
 export async function saveMaxHours(group: '중위권' | '1순위', hours: number): Promise<boolean> {
   const keyName = group === '중위권' ? 'max_hours_middle' : 'max_hours_first';
   const storageKey = group === '중위권' ? 'edu_calendar_max_hours_middle' : 'edu_calendar_max_hours_first';
@@ -822,7 +708,6 @@ export async function saveMaxHours(group: '중위권' | '1순위', hours: number
   return true;
 }
 
-// 7. 전체 로컬 데이터를 Supabase 클라우드로 초고속 병렬 일괄 업로드 (0.2초 완성)
 export async function syncAllToCloud(): Promise<{ success: boolean; count: number; error?: string }> {
   const client = getSupabaseClient();
   if (!client) {
@@ -835,7 +720,6 @@ export async function syncAllToCloud(): Promise<{ success: boolean; count: numbe
     const middleHours = getLocalMaxHours('중위권');
     const firstHours = getLocalMaxHours('1순위');
 
-    // 병렬로 초고속 일괄 업로드
     await Promise.all([
       saveStudents(students),
       saveRecordsBatch(records),
@@ -849,7 +733,6 @@ export async function syncAllToCloud(): Promise<{ success: boolean; count: numbe
   }
 }
 
-// 8. Supabase 실시간 WebSocket 구독 (기기 간 실시간 자동 0.1초 동기화)
 export function subscribeToRealtimeChanges(onRemoteChange: () => void): () => void {
   const client = getSupabaseClient();
   if (!client) return () => {};
