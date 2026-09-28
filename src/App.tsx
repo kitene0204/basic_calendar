@@ -141,12 +141,20 @@ export default function App() {
   };
 
   const handleDeleteStudent = async (studentId: string) => {
-    if (!window.confirm('정말 이 학생을 명단에서 삭제하시겠습니까? 관련 지도 이력은 달력에 유지되나 이름이 표시되지 않을 수 있습니다.')) return;
+    const studentToDelete = students.find(s => s.id === studentId);
+    const studentName = studentToDelete ? studentToDelete.name : '해당 학생';
+    if (!window.confirm(`정말 [${studentName}] 학생을 명단에서 삭제하시겠습니까?\n(명단과 통계에서 완전히 제외되며 다시 나타나지 않습니다)`)) return;
     
+    // 1. UI 상태 즉시 낙관적 반영
     const updatedStudents = students.filter(s => s.id !== studentId);
     setStudents(updatedStudents);
+    
+    // 2. 톰스톤 등록 및 로컬/Supabase DB에서 영구 삭제
     await deleteStudentFromDb(studentId);
     await saveStudents(updatedStudents);
+
+    setSyncNotice(`🗑️ [${studentName}] 학생이 명단에서 완전히 삭제되었습니다.`);
+    setTimeout(() => setSyncNotice(null), 4000);
   };
 
   const handleSaveMaxHours = async (group: '중위권' | '1순위', hours: number) => {
@@ -163,6 +171,8 @@ export default function App() {
     const creds = getSupabaseCredentials();
     setIsSupabaseEnabled(creds.isValid);
     loadAllData();
+    setSyncNotice('✅ 모든 설정이 저장되어 적용되었습니다.');
+    setTimeout(() => setSyncNotice(null), 3000);
   };
 
   // 4. 지도 기록 조작 관련 핸들러

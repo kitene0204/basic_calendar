@@ -70,7 +70,8 @@ export default function SettingsPanel({
     // Supabase 클라이언트 재설정 알림
     onSupabaseConfigChange();
 
-    alert('설정이 저장되었습니다.');
+    // 3. 설정창 자동으로 닫기
+    onClose();
   };
 
   // SQL 복사 기능

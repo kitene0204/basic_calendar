@@ -205,8 +205,29 @@
             STUDENTS: 'edu_calendar_students',
             RECORDS: 'edu_calendar_records',
             MAX_HOURS_MIDDLE: 'edu_calendar_max_hours_middle',
-            MAX_HOURS_FIRST: 'edu_calendar_max_hours_first'
+            MAX_HOURS_FIRST: 'edu_calendar_max_hours_first',
+            DELETED_STUDENTS: 'edu_calendar_deleted_students',
+            INITIALIZED: 'edu_calendar_initialized_v1'
         };
+
+        function getDeletedStudentIds() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEYS.DELETED_STUDENTS);
+                if (raw) {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr)) return new Set(arr);
+                }
+            } catch (_) {}
+            return new Set();
+        }
+
+        function markStudentDeleted(id) {
+            try {
+                const s = getDeletedStudentIds();
+                s.add(id);
+                localStorage.setItem(STORAGE_KEYS.DELETED_STUDENTS, JSON.stringify(Array.from(s)));
+            } catch (_) {}
+        }
 
         const INITIAL_STUDENTS = [
             { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
@@ -279,6 +300,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
         }
 
         async function fetchStudents() {
+            const deletedSet = getDeletedStudentIds();
             const client = getSupabaseClient();
             if (client) {
                 try {
@@ -288,41 +310,57 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                         .order('name', { ascending: true });
                     
                     if (!error && data) {
-                        const students = data.map(item => ({
+                        const rawStudents = data.map(item => ({
                             id: item.id,
                             name: item.name,
                             group: item.group,
                             createdAt: item.created_at
                         }));
-                        if (students.length === 0) {
-                            await saveStudents(INITIAL_STUDENTS);
-                            return INITIAL_STUDENTS;
+
+                        const validStudents = rawStudents.filter(s => !deletedSet.has(s.id));
+
+                        if (rawStudents.length === 0 && !localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
+                            const initClean = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+                            await saveStudents(initClean);
+                            localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+                            return initClean;
                         }
-                        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
-                        return students;
+
+                        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(validStudents));
+                        return validStudents;
                     }
                 } catch (e) {
                     console.error('Supabase connection failed:', e);
                 }
             }
             const local = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-            if (local) return JSON.parse(local);
-            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
-            return INITIAL_STUDENTS;
+            if (local) {
+                try {
+                    const parsed = JSON.parse(local);
+                    if (Array.isArray(parsed)) return parsed.filter(s => !deletedSet.has(s.id));
+                } catch (_) {}
+            }
+            const initClean = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(initClean));
+            return initClean;
         }
 
         async function saveStudents(students) {
-            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+            const deletedSet = getDeletedStudentIds();
+            const cleanStudents = students.filter(s => !deletedSet.has(s.id));
+            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cleanStudents));
             const client = getSupabaseClient();
             if (client) {
                 try {
-                    const upsertData = students.map(s => ({
-                        id: s.id,
-                        name: s.name,
-                        group: s.group,
-                        created_at: s.createdAt
-                    }));
-                    await client.from('students').upsert(upsertData, { onConflict: 'id' });
+                    if (cleanStudents.length > 0) {
+                        const upsertData = cleanStudents.map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            group: s.group,
+                            created_at: s.createdAt
+                        }));
+                        await client.from('students').upsert(upsertData, { onConflict: 'id' });
+                    }
                 } catch (e) {
                     console.error(e);
                 }
@@ -331,6 +369,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
         }
 
         async function deleteStudentFromDb(studentId) {
+            markStudentDeleted(studentId);
             const client = getSupabaseClient();
             if (client) {
                 try {
@@ -937,7 +976,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                 localStorage.setItem('custom_supabase_anon_key', sbKey.trim());
                 
                 onSupabaseConfigChange();
-                alert('설정이 저장되었습니다.');
+                onClose();
             };
 
             const handleCopySql = () => {
