@@ -61,6 +61,41 @@ const STORAGE_KEYS = {
   INITIALIZED: 'edu_calendar_initialized_v1'
 };
 
+// 학생 구버전 ID -> Supabase DB 정규 ID 매핑
+export const STUDENT_ID_ALIASES: Record<string, string> = {
+  'student-4': 'student-1790555167606', // 강주연
+  'student-6': 'student-1782781087573', // 이정
+  'student-1782781947678': 'student-1782781087573', // 이정
+};
+
+export function normalizeRecordStudentIds(record: TeachingRecord): TeachingRecord {
+  const newStudentIds = new Set<string>();
+  const newHours: Record<string, number> = {};
+  const newNotes: Record<string, string> = {};
+
+  for (const sid of record.studentIds) {
+    const targetId = STUDENT_ID_ALIASES[sid] || sid;
+    newStudentIds.add(targetId);
+  }
+
+  for (const [k, v] of Object.entries(record.hours || {})) {
+    const targetId = STUDENT_ID_ALIASES[k] || k;
+    newHours[targetId] = v;
+  }
+
+  for (const [k, v] of Object.entries(record.notes || {})) {
+    const targetId = STUDENT_ID_ALIASES[k] || k;
+    newNotes[targetId] = v;
+  }
+
+  return {
+    ...record,
+    studentIds: Array.from(newStudentIds),
+    hours: newHours,
+    notes: newNotes
+  };
+}
+
 // 중복 학생(이름 동일) 자동 감지 및 단일화 헬퍼 함수
 export function deduplicateStudents(studentsList: Student[]): { 
   uniqueStudents: Student[]; 
@@ -178,14 +213,14 @@ export function markStudentDeleted(studentId: string): void {
 // 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
 export const CURRENT_DATA_VERSION = '2026-09-28-v17-kang-middle-sync';
 
-// 초기 기본 학생 명단 (실제 운영 일지 기준 100% 일치: 중위권 5명, 1순위 1명)
+// 초기 기본 학생 명단 (실제 Supabase DB 학생 테이블과 100% 일치)
 export const INITIAL_STUDENTS: Student[] = [
-  { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
-  { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
-  { id: 'student-6', name: '이정', group: '중위권', createdAt: new Date().toISOString() },
-  { id: 'student-5', name: '엄호준', group: '중위권', createdAt: new Date().toISOString() },
-  { id: 'student-4', name: '강주연', group: '중위권', createdAt: new Date().toISOString() },
-  { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() }
+  { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: '2026-06-29 14:23:06.054+00' },
+  { id: 'student-2', name: '황혜리', group: '중위권', createdAt: '2026-06-29 14:23:06.054+00' },
+  { id: 'student-1782781087573', name: '이정', group: '중위권', createdAt: '2026-06-30 00:58:07.573+00' },
+  { id: 'student-5', name: '엄호준', group: '중위권', createdAt: '2026-09-27 23:57:23.423+00' },
+  { id: 'student-1790555167606', name: '강주연', group: '중위권', createdAt: '2026-09-28 00:26:07.606+00' },
+  { id: 'student-3', name: '전성후', group: '1순위', createdAt: '2026-06-29 14:23:06.054+00' }
 ];
 
 // 초기 기본 지도 기록 (중위권 35차시[남은 5차시], 1순위 27차시[남은 13차시] 실제 일지 100% 일치 반영)
@@ -911,7 +946,7 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
           const cleanNotes: Record<string, string> = { ...rawNotes };
           delete cleanNotes.__HOURS_BACKUP__;
 
-          return {
+          const rec: TeachingRecord = {
             id: item.date,
             date: item.date,
             studentIds: Array.isArray(item.student_ids) ? item.student_ids : JSON.parse(item.student_ids || '[]'),
@@ -919,22 +954,15 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
             notes: cleanNotes,
             updatedAt: item.updated_at
           };
+
+          // 구버전 학생 ID (student-4 -> student-1790555167606 등) 정규화
+          return normalizeRecordStudentIds(rec);
         });
 
         // Supabase에 데이터가 비어 있으면 최신 초기 기록을 업서트하고 반환
-        if (records.length === 0) {
+        if (records.length === 0 && !localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
           saveRecordsBatch(INITIAL_RECORDS).catch(console.error);
           return INITIAL_RECORDS;
-        }
-
-        // 8월/9월 등 최신 필수 지도 기록 중 누락된 날짜가 있다면 자동 병합 및 백업
-        const existingDates = new Set(records.map(r => r.date));
-        const missingRecords = INITIAL_RECORDS.filter(ir => !existingDates.has(ir.date));
-        if (missingRecords.length > 0) {
-          const merged = [...records, ...missingRecords];
-          saveRecordsBatch(missingRecords).catch(console.error);
-          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
-          return merged;
         }
 
         // 로컬 캐시 동기화
@@ -946,26 +974,28 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
     }
   }
 
-  return getLocalRecords();
+  const local = getLocalRecords();
+  return local.map(r => normalizeRecordStudentIds(r));
 }
 
 // 4. 단일 기록 초고속 저장 (로컬 즉시 반영 + 비동기 원격 업서트)
 export async function saveRecord(record: TeachingRecord): Promise<boolean> {
-  const currentHours = record.hours || {};
+  const normalized = normalizeRecordStudentIds(record);
+  const currentHours = normalized.hours || {};
   
   // DB의 hours 컬럼 존재 유무에 상관없이 100% 안전하게 보존하기 위해 notes 내부에 __HOURS_BACKUP__을 병합
   const notesWithBackup = {
-    ...record.notes,
+    ...normalized.notes,
     __HOURS_BACKUP__: JSON.stringify(currentHours)
   };
 
   // 로컬 캐시 즉시 업데이트 (O(1) 속도)
   const local = getLocalRecords();
   const cleanRecord: TeachingRecord = {
-    ...record,
+    ...normalized,
     hours: currentHours
   };
-  const existingIndex = local.findIndex(r => r.date === record.date);
+  const existingIndex = local.findIndex(r => r.date === normalized.date);
   if (existingIndex >= 0) {
     local[existingIndex] = cleanRecord;
   } else {
@@ -976,26 +1006,29 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
   const client = getSupabaseClient();
   if (client) {
     try {
+      // records 테이블의 실제 컬럼: date (PK), student_ids, notes, hours, updated_at
+      // 주의: id 컬럼은 records 테이블에 존재하지 않으므로 전송 금지!
+      const payload: any = {
+        date: normalized.date,
+        student_ids: normalized.studentIds,
+        hours: currentHours,
+        notes: notesWithBackup,
+        updated_at: new Date().toISOString()
+      };
+
       const { error: upsertError } = await client
         .from('records')
-        .upsert({
-          date: record.date,
-          student_ids: record.studentIds,
-          hours: currentHours,
-          notes: notesWithBackup,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'date' });
+        .upsert(payload, { onConflict: 'date' });
 
       if (upsertError) {
-        // Fallback: hours 컬럼이 없는 테이블인 경우
-        await client
-          .from('records')
-          .upsert({
-            date: record.date,
-            student_ids: record.studentIds,
-            notes: notesWithBackup,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'date' });
+        console.error('Supabase record upsert error:', upsertError);
+        // Fallback: 혹시 hours 컬럼 없는 경우
+        const { hours, ...fallbackPayload } = payload;
+        const res2 = await client.from('records').upsert(fallbackPayload, { onConflict: 'date' });
+        if (res2.error) {
+          console.error('Supabase fallback error:', res2.error);
+          return false;
+        }
       }
       return true;
     } catch (e) {
@@ -1008,12 +1041,13 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
 
 // 4-1. 여러 기록 초고속 일괄 배치 저장 (1번의 HTTP 호출로 0.1초 동기화)
 export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<boolean> {
-  localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(recordsList));
+  const normalizedList = recordsList.map(r => normalizeRecordStudentIds(r));
+  localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(normalizedList));
 
   const client = getSupabaseClient();
-  if (client && recordsList.length > 0) {
+  if (client && normalizedList.length > 0) {
     try {
-      const batchPayload = recordsList.map(rec => {
+      const batchPayload = normalizedList.map(rec => {
         const currentHours = rec.hours || {};
         const notesWithBackup = {
           ...rec.notes,
@@ -1028,12 +1062,12 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
         };
       });
 
-      const { error } = await client
+      let { error } = await client
         .from('records')
         .upsert(batchPayload, { onConflict: 'date' });
 
       if (error) {
-        // Fallback if hours column not yet migrated
+        console.warn('Batch upsert onConflict:date failed, fallback without hours...', error);
         const fallbackPayload = batchPayload.map(p => {
           const { hours, ...rest } = p;
           return rest;

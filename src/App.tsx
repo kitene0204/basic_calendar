@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, 
   LayoutDashboard, 
@@ -74,7 +74,16 @@ export default function App() {
       ]);
 
       setStudents(fetchedStudents);
-      setRecords(fetchedRecords);
+      setRecords(prevRecords => {
+        // 모달창이 열려있고 작성 중인 날짜가 있다면, 그 날짜의 로컬 변경분은 덮어쓰지 않고 유지
+        if (isRecordModalOpen && selectedDate) {
+          const currentEditing = prevRecords.find(r => r.date === selectedDate);
+          if (currentEditing) {
+            return fetchedRecords.map(r => r.date === selectedDate ? currentEditing : r);
+          }
+        }
+        return fetchedRecords;
+      });
       setMaxHoursMiddle(hoursMiddle);
       setMaxHoursFirst(hoursFirst);
 
@@ -192,21 +201,39 @@ export default function App() {
   };
 
   // 4. 지도 기록 조작 관련 핸들러
-  const handleSaveRecord = async (updatedRecord: TeachingRecord) => {
-    // 1. 낙관적 로컬 상태 반영
-    const filteredRecords = records.filter(r => r.date !== updatedRecord.date);
-    
-    // 선택된 학생이 0명이고 메모 내용도 아예 없는 경우 해당 날짜 기록 비우기 가능
-    const hasAnyStudents = updatedRecord.studentIds.length > 0;
-    const hasAnyNotes = Object.values(updatedRecord.notes).some(note => note.trim().length > 0);
-    
-    if (hasAnyStudents || hasAnyNotes) {
-      filteredRecords.push(updatedRecord);
-    }
-    setRecords(filteredRecords);
+  const saveTimeoutRef = useRef<any>(null);
 
-    // 2. DB 및 스토리지 동기화
-    await saveRecord(updatedRecord);
+  const handleSaveRecord = (updatedRecord: TeachingRecord, immediate = false) => {
+    // 1. 낙관적 로컬 상태 즉각 반영 (0ms 화면 즉시 갱신)
+    setRecords(prev => {
+      const filtered = prev.filter(r => r.date !== updatedRecord.date);
+      const hasAnyStudents = updatedRecord.studentIds.length > 0;
+      const hasAnyNotes = Object.values(updatedRecord.notes).some(note => note.trim().length > 0);
+      if (hasAnyStudents || hasAnyNotes) {
+        return [...filtered, updatedRecord];
+      }
+      return filtered;
+    });
+
+    // 2. DB 및 스토리지 동기화 (디바운스 처리로 타이핑 중 끊김/경쟁 상태 방지)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    const executeSave = async () => {
+      const ok = await saveRecord(updatedRecord);
+      if (ok) {
+        setSyncNotice(`☁️ [${updatedRecord.date}] 지도 내용이 클라우드에 안전하게 동기화되었습니다.`);
+        setTimeout(() => setSyncNotice(null), 2500);
+      }
+    };
+
+    if (immediate) {
+      executeSave();
+    } else {
+      saveTimeoutRef.current = setTimeout(executeSave, 350);
+    }
   };
 
   // 현재 선택된 날짜의 지도 기록 찾기

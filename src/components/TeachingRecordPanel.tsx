@@ -6,7 +6,7 @@ interface TeachingRecordPanelProps {
   selectedDate: string; // 'YYYY-MM-DD'
   students: Student[];
   record: TeachingRecord | undefined;
-  onSaveRecord: (record: TeachingRecord) => void;
+  onSaveRecord: (record: TeachingRecord, immediate?: boolean) => void;
   onClose: () => void;
 }
 
@@ -134,7 +134,17 @@ export default function TeachingRecordPanel({
           <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">지도한 학생과 운영 차시를 선택하세요.</p>
         </div>
         <button
-          onClick={onClose}
+          onClick={() => {
+            onSaveRecord({
+              id: selectedDate,
+              date: selectedDate,
+              studentIds: currentStudentIds,
+              hours: currentHours,
+              notes: currentNotes,
+              updatedAt: new Date().toISOString(),
+            }, true);
+            onClose();
+          }}
           className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full transition-colors cursor-pointer"
           title="저장 및 닫기"
           id="btn-close-panel"
@@ -410,7 +420,17 @@ export default function TeachingRecordPanel({
       {/* 패널 하단 고정 닫기 버튼 */}
       <div className="p-4 bg-slate-50 border-t border-slate-100">
         <button
-          onClick={onClose}
+          onClick={() => {
+            onSaveRecord({
+              id: selectedDate,
+              date: selectedDate,
+              studentIds: currentStudentIds,
+              hours: currentHours,
+              notes: currentNotes,
+              updatedAt: new Date().toISOString(),
+            }, true);
+            onClose();
+          }}
           className="w-full py-3.5 bg-[#2E3243] hover:bg-[#1E212E] active:bg-[#151720] text-white font-black rounded-xl transition-all shadow-md hover:shadow-lg text-center cursor-pointer flex items-center justify-center space-x-2"
           id="btn-confirm-panel"
         >

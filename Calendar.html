@@ -230,13 +230,47 @@
         }
 
         const INITIAL_STUDENTS = [
-            { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
-            { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
-            { id: 'student-6', name: '이정', group: '중위권', createdAt: new Date().toISOString() },
-            { id: 'student-5', name: '엄호준', group: '중위권', createdAt: new Date().toISOString() },
-            { id: 'student-4', name: '강주연', group: '중위권', createdAt: new Date().toISOString() },
-            { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() }
+            { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: '2026-06-29 14:23:06.054+00' },
+            { id: 'student-2', name: '황혜리', group: '중위권', createdAt: '2026-06-29 14:23:06.054+00' },
+            { id: 'student-1782781087573', name: '이정', group: '중위권', createdAt: '2026-06-30 00:58:07.573+00' },
+            { id: 'student-5', name: '엄호준', group: '중위권', createdAt: '2026-09-27 23:57:23.423+00' },
+            { id: 'student-1790555167606', name: '강주연', group: '중위권', createdAt: '2026-09-28 00:26:07.606+00' },
+            { id: 'student-3', name: '전성후', group: '1순위', createdAt: '2026-06-29 14:23:06.054+00' }
         ];
+
+        const STUDENT_ID_ALIASES = {
+            'student-4': 'student-1790555167606',
+            'student-6': 'student-1782781087573',
+            'student-1782781947678': 'student-1782781087573'
+        };
+
+        function normalizeRecordStudentIds(record) {
+            const newStudentIds = new Set();
+            const newHours = {};
+            const newNotes = {};
+
+            for (const sid of (record.studentIds || [])) {
+                const targetId = STUDENT_ID_ALIASES[sid] || sid;
+                newStudentIds.add(targetId);
+            }
+
+            for (const [k, v] of Object.entries(record.hours || {})) {
+                const targetId = STUDENT_ID_ALIASES[k] || k;
+                newHours[targetId] = v;
+            }
+
+            for (const [k, v] of Object.entries(record.notes || {})) {
+                const targetId = STUDENT_ID_ALIASES[k] || k;
+                newNotes[targetId] = v;
+            }
+
+            return {
+                ...record,
+                studentIds: Array.from(newStudentIds),
+                hours: newHours,
+                notes: newNotes
+            };
+        }
 
         const SUPABASE_SQL_SETUP = `-- Supabase SQL Editor에 복사해서 붙여넣고 실행하세요!
 
