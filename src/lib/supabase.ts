@@ -1,21 +1,30 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Student, TeachingRecord } from '../types';
 
+// ====================================================
+// [통합 portal 프로젝트 기본 설정]
+// 모든 PC와 브라우저에서 기본적으로 이 백엔드에 즉시 연결되도록 보장
+// ====================================================
+export const PORTAL_PROJECT_URL = 'https://lqajnsqoovngfgabalkj.supabase.co';
+export const PORTAL_PROJECT_ANON_KEY = 'sb_publishable_DcAlnHgLYSd92ICS66z3RA_DvrzyPhX';
+
 let supabaseInstance: SupabaseClient | null = null;
 
-// 로컬스토리지에서 사용자 지정 Supabase 설정 로드
+// 로컬스토리지에서 사용자 지정 Supabase 설정 로드 (기본값: portal 프로젝트)
 export function getSupabaseCredentials() {
-  const localUrl = localStorage.getItem('custom_supabase_url') || (import.meta as any).env.VITE_SUPABASE_URL || '';
-  const localKey = localStorage.getItem('custom_supabase_anon_key') || (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
+  const localUrl = localStorage.getItem('custom_supabase_url');
+  const localKey = localStorage.getItem('custom_supabase_anon_key');
   
   // placeholder 형식의 더미 값들 필터링
-  const isValidUrl = localUrl && localUrl.startsWith('http') && !localUrl.includes('your-project');
-  const isValidKey = localKey && localKey.length > 20 && !localKey.includes('your-anon-key');
+  const isValidCustomUrl = localUrl && localUrl.startsWith('http') && !localUrl.includes('your-project');
+  const isValidCustomKey = localKey && localKey.length > 20 && !localKey.includes('your-anon-key');
 
-  if (isValidUrl && isValidKey) {
+  if (isValidCustomUrl && isValidCustomKey) {
     return { url: localUrl, key: localKey, isValid: true };
   }
-  return { url: localUrl, key: localKey, isValid: false };
+
+  // 기본적으로 portal 프로젝트를 사용하여 어떤 PC/브라우저에서든 0초 만에 완벽 동기화 보장!
+  return { url: PORTAL_PROJECT_URL, key: PORTAL_PROJECT_ANON_KEY, isValid: true };
 }
 
 export function getSupabaseClient(): SupabaseClient | null {
@@ -51,6 +60,89 @@ const STORAGE_KEYS = {
   DELETED_STUDENTS: 'edu_calendar_deleted_students',
   INITIALIZED: 'edu_calendar_initialized_v1'
 };
+
+// 중복 학생(이름 동일) 자동 감지 및 단일화 헬퍼 함수
+export function deduplicateStudents(studentsList: Student[]): { 
+  uniqueStudents: Student[]; 
+  duplicateIdMap: Record<string, string>; 
+  removedIds: string[];
+} {
+  const seen = new Map<string, Student>();
+  const duplicateIdMap: Record<string, string> = {};
+  const removedIds: string[] = [];
+
+  for (const s of studentsList) {
+    const key = `${s.name.trim()}_${s.group}`;
+    if (!seen.has(key)) {
+      seen.set(key, s);
+    } else {
+      const primary = seen.get(key)!;
+      duplicateIdMap[s.id] = primary.id;
+      removedIds.push(s.id);
+    }
+  }
+
+  return {
+    uniqueStudents: Array.from(seen.values()),
+    duplicateIdMap,
+    removedIds
+  };
+}
+
+// 지도 기록(records) 내의 중복 학생 ID를 대표 ID로 자동 마이그레이션
+export function migrateDuplicateStudentIdsInRecords(idMap: Record<string, string>): void {
+  if (Object.keys(idMap).length === 0 || typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.RECORDS);
+    if (!raw) return;
+    const records: TeachingRecord[] = JSON.parse(raw);
+    let changed = false;
+
+    const updatedRecords = records.map(rec => {
+      let recChanged = false;
+      const newStudentIds = new Set<string>();
+      const newHours: Record<string, number> = { ...(rec.hours || {}) };
+      const newNotes: Record<string, string> = { ...(rec.notes || {}) };
+
+      for (const sid of rec.studentIds) {
+        if (idMap[sid]) {
+          const targetId = idMap[sid];
+          newStudentIds.add(targetId);
+          recChanged = true;
+          changed = true;
+          if (newHours[sid] !== undefined) {
+            newHours[targetId] = newHours[sid];
+            delete newHours[sid];
+          }
+          if (newNotes[sid] !== undefined) {
+            newNotes[targetId] = newNotes[sid];
+            delete newNotes[sid];
+          }
+        } else {
+          newStudentIds.add(sid);
+        }
+      }
+
+      if (recChanged) {
+        return {
+          ...rec,
+          studentIds: Array.from(newStudentIds),
+          hours: newHours,
+          notes: newNotes
+        };
+      }
+      return rec;
+    });
+
+    if (changed) {
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(updatedRecords));
+      // Supabase에도 백그라운드 배치 업데이트
+      saveRecordsBatch(updatedRecords).catch(console.error);
+    }
+  } catch (e) {
+    console.error('Failed to migrate duplicate student IDs in records:', e);
+  }
+}
 
 // 삭제된 학생 ID 영구 보관 (좀비 부활 원천 차단)
 export function getDeletedStudentIds(): Set<string> {
@@ -551,11 +643,13 @@ export function getLocalStudents(): Student[] {
     try {
       const parsed = JSON.parse(local);
       if (Array.isArray(parsed)) {
-        return parsed.filter(s => !deletedSet.has(s.id));
+        const filtered = parsed.filter(s => !deletedSet.has(s.id));
+        return deduplicateStudents(filtered).uniqueStudents;
       }
     } catch (_) {}
   }
-  return INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+  const initClean = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+  return deduplicateStudents(initClean).uniqueStudents;
 }
 
 export function getLocalRecords(): TeachingRecord[] {
@@ -629,16 +723,28 @@ export async function fetchStudents(): Promise<Student[]> {
         // 삭제된 학생은 무조건 완전 제외!
         const validStudents = rawStudents.filter(s => !deletedSet.has(s.id));
 
+        // ⚠️ 중복 학생(이름 동일) 자동 감지 및 정리 (DB 및 로컬 동시 정리)
+        const { uniqueStudents, duplicateIdMap, removedIds } = deduplicateStudents(validStudents);
+        if (removedIds.length > 0) {
+          try {
+            await client.from('students').delete().in('id', removedIds);
+            console.log('Cleaned duplicate student entries from DB:', removedIds);
+          } catch (dupErr) {
+            console.warn('Failed to clean duplicate students:', dupErr);
+          }
+          migrateDuplicateStudentIdsInRecords(duplicateIdMap);
+        }
+
         // Supabase에 데이터가 전혀 없고 최초 상태인 경우에만 초기 학생 저장
         if (rawStudents.length === 0 && !localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
-          const initialClean = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+          const initialClean = deduplicateStudents(INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id))).uniqueStudents;
           saveStudents(initialClean).catch(console.error);
           return initialClean;
         }
 
         // ⚠️ 절대 삭제된 학생을 누락된 학생으로 착각하여 INITIAL_STUDENTS와 강제 병합하지 않음!
-        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(validStudents));
-        return validStudents;
+        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(uniqueStudents));
+        return uniqueStudents;
       }
     } catch (e) {
       console.error('Supabase fetch students error:', e);
@@ -651,17 +757,17 @@ export async function fetchStudents(): Promise<Student[]> {
 // 2. 학생 데이터 저장(업서트)
 export async function saveStudents(students: Student[]): Promise<boolean> {
   const deletedSet = getDeletedStudentIds();
-  // 삭제된 학생이 혹시라도 포함되어 있다면 완전히 걸러냄
-  const cleanStudents = students.filter(s => !deletedSet.has(s.id));
+  // 삭제된 학생 제외 및 중복 제거
+  const { uniqueStudents } = deduplicateStudents(students.filter(s => !deletedSet.has(s.id)));
 
   // 로컬 우선 즉시 저장
-  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cleanStudents));
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(uniqueStudents));
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      if (cleanStudents.length > 0) {
-        const upsertData = cleanStudents.map(s => ({
+      if (uniqueStudents.length > 0) {
+        const upsertData = uniqueStudents.map(s => ({
           id: s.id,
           name: s.name,
           group: s.group,

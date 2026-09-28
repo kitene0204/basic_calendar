@@ -269,13 +269,43 @@ CREATE POLICY "Allow public read/write" ON students FOR ALL USING (true) WITH CH
 CREATE POLICY "Allow public read/write" ON records FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CHECK (true);`;
 
-        function getSupabaseCredentials() {
-            const localUrl = localStorage.getItem('custom_supabase_url') || '';
-            const localKey = localStorage.getItem('custom_supabase_anon_key') || '';
-            const isValidUrl = localUrl && localUrl.startsWith('http') && !localUrl.includes('your-project');
-            const isValidKey = localKey && localKey.length > 20 && !localKey.includes('your-anon-key');
+        const PORTAL_PROJECT_URL = 'https://lqajnsqoovngfgabalkj.supabase.co';
+        const PORTAL_PROJECT_ANON_KEY = 'sb_publishable_DcAlnHgLYSd92ICS66z3RA_DvrzyPhX';
 
-            return { url: localUrl, key: localKey, isValid: !!(isValidUrl && isValidKey) };
+        function deduplicateStudents(studentsList) {
+            const seen = new Map();
+            const duplicateIdMap = {};
+            const removedIds = [];
+
+            for (const s of studentsList) {
+                const key = `${s.name.trim()}_${s.group}`;
+                if (!seen.has(key)) {
+                    seen.set(key, s);
+                } else {
+                    const primary = seen.get(key);
+                    duplicateIdMap[s.id] = primary.id;
+                    removedIds.push(s.id);
+                }
+            }
+
+            return {
+                uniqueStudents: Array.from(seen.values()),
+                duplicateIdMap,
+                removedIds
+            };
+        }
+
+        function getSupabaseCredentials() {
+            const localUrl = localStorage.getItem('custom_supabase_url');
+            const localKey = localStorage.getItem('custom_supabase_anon_key');
+            const isValidCustomUrl = localUrl && localUrl.startsWith('http') && !localUrl.includes('your-project');
+            const isValidCustomKey = localKey && localKey.length > 20 && !localKey.includes('your-anon-key');
+
+            if (isValidCustomUrl && isValidCustomKey) {
+                return { url: localUrl, key: localKey, isValid: true };
+            }
+
+            return { url: PORTAL_PROJECT_URL, key: PORTAL_PROJECT_ANON_KEY, isValid: true };
         }
 
         function getSupabaseClient() {
@@ -318,16 +348,23 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                         }));
 
                         const validStudents = rawStudents.filter(s => !deletedSet.has(s.id));
+                        const { uniqueStudents, removedIds } = deduplicateStudents(validStudents);
+                        
+                        if (removedIds.length > 0) {
+                            try {
+                                await client.from('students').delete().in('id', removedIds);
+                            } catch (_) {}
+                        }
 
                         if (rawStudents.length === 0 && !localStorage.getItem(STORAGE_KEYS.INITIALIZED)) {
-                            const initClean = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+                            const initClean = deduplicateStudents(INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id))).uniqueStudents;
                             await saveStudents(initClean);
                             localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
                             return initClean;
                         }
 
-                        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(validStudents));
-                        return validStudents;
+                        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(uniqueStudents));
+                        return uniqueStudents;
                     }
                 } catch (e) {
                     console.error('Supabase connection failed:', e);
@@ -337,23 +374,26 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             if (local) {
                 try {
                     const parsed = JSON.parse(local);
-                    if (Array.isArray(parsed)) return parsed.filter(s => !deletedSet.has(s.id));
+                    if (Array.isArray(parsed)) {
+                        const filtered = parsed.filter(s => !deletedSet.has(s.id));
+                        return deduplicateStudents(filtered).uniqueStudents;
+                    }
                 } catch (_) {}
             }
-            const initClean = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+            const initClean = deduplicateStudents(INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id))).uniqueStudents;
             localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(initClean));
             return initClean;
         }
 
         async function saveStudents(students) {
             const deletedSet = getDeletedStudentIds();
-            const cleanStudents = students.filter(s => !deletedSet.has(s.id));
-            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cleanStudents));
+            const { uniqueStudents } = deduplicateStudents(students.filter(s => !deletedSet.has(s.id)));
+            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(uniqueStudents));
             const client = getSupabaseClient();
             if (client) {
                 try {
-                    if (cleanStudents.length > 0) {
-                        const upsertData = cleanStudents.map(s => ({
+                    if (uniqueStudents.length > 0) {
+                        const upsertData = uniqueStudents.map(s => ({
                             id: s.id,
                             name: s.name,
                             group: s.group,

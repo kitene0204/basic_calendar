@@ -120,17 +120,33 @@ export default function App() {
       }
     });
 
+    // 3.5초마다 백그라운드 자동 동기화 (다른 PC/브라우저의 변경사항을 실시간으로 자동 수신)
+    const autoSyncTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadAllData(true);
+      }
+    }, 3500);
+
     return () => {
       unsubscribeRealtime();
       window.removeEventListener('focus', handleFocus);
+      clearInterval(autoSyncTimer);
     };
   }, []);
 
   // 3. 학생 데이터 조작 관련 핸들러들
   const handleAddStudent = async (name: string, group: '중위권' | '1순위' | '기타') => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    if (students.some(s => s.name.trim() === trimmed)) {
+      alert(`이미 등록되어 있는 학생 이름입니다: "${trimmed}"\n중복 등록을 방지하기 위해 추가되지 않았습니다.`);
+      return;
+    }
+
     const newStudent: Student = {
       id: `student-${Date.now()}`,
-      name,
+      name: trimmed,
       group,
       createdAt: new Date().toISOString()
     };
