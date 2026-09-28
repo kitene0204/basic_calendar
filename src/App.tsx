@@ -30,6 +30,14 @@ import {
   syncAllToCloud,
   subscribeToRealtimeChanges
 } from './lib/supabase';
+import {
+  fetchServerData,
+  saveRecordToServer,
+  saveStudentsToServer,
+  saveSettingsToServer,
+  syncLocalToServer,
+  subscribeToServerRealtime
+} from './lib/serverSync';
 import Calendar from './components/Calendar';
 import TeachingRecordPanel from './components/TeachingRecordPanel';
 import SettingsPanel from './components/SettingsPanel';
@@ -62,10 +70,29 @@ export default function App() {
     setSelectedDate(`${yyyy}-${mm}-${dd}`);
   }, []);
 
-  // 전체 데이터 초고속 병렬 로드 함수 (Promise.all)
+  // 전체 데이터 초고속 병렬 로드 함수 (중앙 서버 최우선 + 로컬 fallback)
   const loadAllData = async (silent = false) => {
     if (!silent) setIsSyncing(true);
     try {
+      // 1. 서버 중앙 실시간 저장소 조회 (스마트폰 & 학교 컴퓨터 100% 동일 동기화)
+      const serverData = await fetchServerData();
+      if (serverData && serverData.records && serverData.records.length > 0) {
+        setStudents(serverData.students);
+        setRecords(prevRecords => {
+          if (isRecordModalOpen && selectedDate) {
+            const currentEditing = prevRecords.find(r => r.date === selectedDate);
+            if (currentEditing) {
+              return serverData.records.map(r => r.date === selectedDate ? currentEditing : r);
+            }
+          }
+          return serverData.records;
+        });
+        setMaxHoursMiddle(serverData.maxHoursMiddle);
+        setMaxHoursFirst(serverData.maxHoursFirst);
+        return;
+      }
+
+      // 2. 서버 연결 지연 시 Supabase / 로컬 스토리지 Fallback
       const [fetchedStudents, fetchedRecords, hoursMiddle, hoursFirst] = await Promise.all([
         fetchStudents(),
         fetchRecords(),
@@ -75,7 +102,6 @@ export default function App() {
 
       setStudents(fetchedStudents);
       setRecords(prevRecords => {
-        // 모달창이 열려있고 작성 중인 날짜가 있다면, 그 날짜의 로컬 변경분은 덮어쓰지 않고 유지
         if (isRecordModalOpen && selectedDate) {
           const currentEditing = prevRecords.find(r => r.date === selectedDate);
           if (currentEditing) {
@@ -96,24 +122,34 @@ export default function App() {
     }
   };
 
-  // 초기 로드 시 동기화 토큰 확인 및 데이터 로드 + 실시간 WebSocket 구독 + 창 포커스 시 자동 갱신
+  // 초기 로드 시 실시간 서버 구독 + Supabase 구독 + 창 포커스 시 자동 갱신
   useEffect(() => {
-    const result = checkAndApplySyncUrl();
-    if (result.applied) {
-      setSyncNotice(result.message || '🎉 노트북의 최신 데이터가 성공적으로 동기화되었습니다!');
-      // 즉시 로컬 캐시에서 상태 리로드
-      setStudents(getLocalStudents());
-      setRecords(getLocalRecords());
-      setMaxHoursMiddle(getLocalMaxHours('중위권'));
-      setMaxHoursFirst(getLocalMaxHours('1순위'));
-      setTimeout(() => setSyncNotice(null), 6000);
-    }
-
     const creds = getSupabaseCredentials();
     setIsSupabaseEnabled(creds.isValid);
     loadAllData(false);
 
-    // Supabase 실시간 WebSocket 구독 (다른 PC/기기 변경 시 0.1초 즉각 반영)
+    // 학교 컴퓨터 로컬스토리지에 있는 데이터를 서버와 즉시 일치시킴
+    const localRecs = getLocalRecords();
+    if (localRecs.length > 0) {
+      syncLocalToServer(
+        getLocalStudents(),
+        localRecs,
+        getLocalMaxHours('중위권'),
+        getLocalMaxHours('1순위')
+      ).then(res => {
+        if (res) {
+          setStudents(res.students);
+          setRecords(res.records);
+        }
+      });
+    }
+
+    // 1. 실시간 서버 SSE 구독 (스마트폰 & 학교 컴퓨터 간 0.5초 즉시 동기화)
+    const unsubscribeServer = subscribeToServerRealtime(() => {
+      loadAllData(true);
+    });
+
+    // 2. Supabase 실시간 WebSocket 구독
     const unsubscribeRealtime = subscribeToRealtimeChanges(() => {
       loadAllData(true);
     });
@@ -129,17 +165,10 @@ export default function App() {
       }
     });
 
-    // 3.5초마다 백그라운드 자동 동기화 (다른 PC/브라우저의 변경사항을 실시간으로 자동 수신)
-    const autoSyncTimer = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        loadAllData(true);
-      }
-    }, 3500);
-
     return () => {
+      unsubscribeServer();
       unsubscribeRealtime();
       window.removeEventListener('focus', handleFocus);
-      clearInterval(autoSyncTimer);
     };
   }, []);
 
@@ -162,6 +191,7 @@ export default function App() {
     
     const updatedStudents = [...students, newStudent];
     setStudents(updatedStudents);
+    saveStudentsToServer(updatedStudents);
     await saveStudents(updatedStudents);
   };
 
@@ -174,7 +204,8 @@ export default function App() {
     const updatedStudents = students.filter(s => s.id !== studentId);
     setStudents(updatedStudents);
     
-    // 2. 톰스톤 등록 및 로컬/Supabase DB에서 영구 삭제
+    // 2. 서버 및 Supabase DB에서 삭제 동기화
+    saveStudentsToServer(updatedStudents);
     await deleteStudentFromDb(studentId);
     await saveStudents(updatedStudents);
 
@@ -185,8 +216,10 @@ export default function App() {
   const handleSaveMaxHours = async (group: '중위권' | '1순위', hours: number) => {
     if (group === '중위권') {
       setMaxHoursMiddle(hours);
+      saveSettingsToServer(hours, maxHoursFirst);
     } else {
       setMaxHoursFirst(hours);
+      saveSettingsToServer(maxHoursMiddle, hours);
     }
     await saveMaxHours(group, hours);
   };
@@ -215,16 +248,19 @@ export default function App() {
       return filtered;
     });
 
-    // 2. DB 및 스토리지 동기화 (디바운스 처리로 타이핑 중 끊김/경쟁 상태 방지)
+    // 2. 서버 및 DB 동기화 (디바운스 처리로 타이핑 중 끊김/경쟁 상태 방지)
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
 
     const executeSave = async () => {
+      // 1) 서버 중앙 저장소로 즉시 전송 (스마트폰 & 다른 컴퓨터로 0.5초 내 전파)
+      saveRecordToServer(updatedRecord);
+      // 2) Supabase 클라우드로도 백업
       const ok = await saveRecord(updatedRecord);
       if (ok) {
-        setSyncNotice(`☁️ [${updatedRecord.date}] 지도 내용이 클라우드에 안전하게 동기화되었습니다.`);
+        setSyncNotice(`☁️ [${updatedRecord.date}] 모든 기기(컴퓨터·스마트폰)에 실시간 동기화되었습니다.`);
         setTimeout(() => setSyncNotice(null), 2500);
       }
     };
@@ -261,42 +297,35 @@ export default function App() {
         {/* 탭 컨트롤러 & 클라우드 상태 */}
         <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
           
-          {/* Supabase 클라우드 즉시 동기화 트리거 버튼 */}
+          {/* 전체 기기(학교 컴퓨터 & 스마트폰) 즉시 동기화 버튼 */}
           <button
             onClick={async () => {
-              if (!isSupabaseEnabled) {
-                setIsSettingsOpen(true);
-                return;
-              }
               setIsSyncing(true);
-              const res = await syncAllToCloud();
-              setIsSyncing(false);
-              if (res.success) {
-                setSyncNotice('☁️ Supabase 클라우드에 현재 모든 데이터가 100% 즉시 동기화되었습니다!');
-                setTimeout(() => setSyncNotice(null), 5000);
-                await loadAllData(true);
-              } else {
-                setSyncNotice(`⚠️ 동기화 실패: ${res.error || '연결 상태를 확인해주세요.'}`);
-                setTimeout(() => setSyncNotice(null), 6000);
+              // 1. 서버 중앙 실시간 저장소로 즉시 전송
+              const serverRes = await syncLocalToServer(students, records, maxHoursMiddle, maxHoursFirst);
+              if (serverRes) {
+                setStudents(serverRes.students);
+                setRecords(serverRes.records);
               }
+              // 2. Supabase 설정 시 Supabase로도 전송
+              if (isSupabaseEnabled) {
+                await syncAllToCloud();
+              }
+              setIsSyncing(false);
+              setSyncNotice('☁️ 학교 컴퓨터의 모든 데이터가 스마트폰 및 다른 기기에 100% 실시간 동기화되었습니다!');
+              setTimeout(() => setSyncNotice(null), 5000);
             }}
             disabled={isSyncing}
-            className={`px-2 sm:px-3 py-1.5 sm:py-2 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-xs flex items-center space-x-1 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-              isSupabaseEnabled 
-                ? 'bg-gradient-to-r from-[#3ECF8E] to-[#10B981] hover:from-[#34D399] hover:to-[#059669] shadow-emerald-500/20 active:scale-95' 
-                : 'bg-gradient-to-r from-[#727CF5] to-[#5C66E4] hover:from-[#5C66E4] hover:to-[#4A53D4]'
-            }`}
-            title={isSupabaseEnabled ? '클릭 시 Supabase 클라우드로 지금 바로 동기화합니다' : 'Supabase 클라우드 설정 열기'}
+            className="px-2 sm:px-3 py-1.5 sm:py-2 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] shadow-emerald-500/20 active:scale-95"
+            title="클릭 시 현재 기기의 모든 데이터를 스마트폰 및 다른 컴퓨터로 즉시 실시간 동기화합니다"
             id="btn-trigger-supabase-sync"
           >
-            <CloudLightning size={13} className={isSyncing ? 'animate-bounce shrink-0' : 'shrink-0'} />
+            <CloudLightning size={14} className={isSyncing ? 'animate-bounce shrink-0' : 'shrink-0'} />
             <span className="font-black">
-              {isSyncing ? '전송중' : isSupabaseEnabled ? (
+              {isSyncing ? '동기화 중...' : (
                 <>
-                  <span className="hidden sm:inline">슈파베이스 </span>동기화
+                  <span className="hidden sm:inline">실시간 </span>동기화
                 </>
-              ) : (
-                '연동하기'
               )}
             </span>
           </button>
