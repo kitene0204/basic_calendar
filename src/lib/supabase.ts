@@ -72,13 +72,20 @@ export function deduplicateStudents(studentsList: Student[]): {
   const removedIds: string[] = [];
 
   for (const s of studentsList) {
-    const key = `${s.name.trim()}_${s.group}`;
+    const key = s.name.trim();
     if (!seen.has(key)) {
       seen.set(key, s);
     } else {
-      const primary = seen.get(key)!;
-      duplicateIdMap[s.id] = primary.id;
-      removedIds.push(s.id);
+      const existing = seen.get(key)!;
+      // 강주연 학생의 경우 중위권을 가진 쪽을 최종 채택
+      if (key === '강주연' && s.group === '중위권') {
+        duplicateIdMap[existing.id] = s.id;
+        removedIds.push(existing.id);
+        seen.set(key, s);
+      } else {
+        duplicateIdMap[s.id] = existing.id;
+        removedIds.push(s.id);
+      }
     }
   }
 
@@ -169,16 +176,16 @@ export function markStudentDeleted(studentId: string): void {
 }
 
 // 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
-export const CURRENT_DATA_VERSION = '2026-08-28-v16-zombie-fix';
+export const CURRENT_DATA_VERSION = '2026-09-28-v17-kang-middle-sync';
 
-// 초기 기본 학생 명단 (실제 운영 일지 기준 100% 일치)
+// 초기 기본 학생 명단 (실제 운영 일지 기준 100% 일치: 중위권 5명, 1순위 1명)
 export const INITIAL_STUDENTS: Student[] = [
   { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-6', name: '이정', group: '중위권', createdAt: new Date().toISOString() },
   { id: 'student-5', name: '엄호준', group: '중위권', createdAt: new Date().toISOString() },
-  { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() },
-  { id: 'student-4', name: '강주연', group: '1순위', createdAt: new Date().toISOString() }
+  { id: 'student-4', name: '강주연', group: '중위권', createdAt: new Date().toISOString() },
+  { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() }
 ];
 
 // 초기 기본 지도 기록 (중위권 35차시[남은 5차시], 1순위 27차시[남은 13차시] 실제 일지 100% 일치 반영)
@@ -381,17 +388,31 @@ export function ensureLatestDataVersion(): void {
   if (typeof window === 'undefined') return;
   try {
     const isInitialized = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
+    const dataVersion = localStorage.getItem('edu_calendar_data_version');
     const deletedSet = getDeletedStudentIds();
 
-    // 1. 최초 1회 접속 시에만 기본 초기 데이터 로드 (이후에는 사용자 조작 데이터 절대 보존)
-    if (!isInitialized) {
+    // 버전이 다르거나 최초 접속인 경우 최신 명단(강주연: 중위권) 동기화
+    if (!isInitialized || dataVersion !== CURRENT_DATA_VERSION) {
       const existingStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-      if (!existingStudents) {
-        const initialFiltered = INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id));
+      if (existingStudents) {
+        try {
+          const parsed: Student[] = JSON.parse(existingStudents);
+          if (Array.isArray(parsed)) {
+            // 강주연 학생을 중위권으로 보정하고 중복 제거
+            const updated = parsed.map(s => {
+              if (s.name.trim() === '강주연') return { ...s, group: '중위권' as const };
+              return s;
+            });
+            const deduped = deduplicateStudents(updated.filter(s => !deletedSet.has(s.id))).uniqueStudents;
+            localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(deduped));
+          }
+        } catch (_) {}
+      } else {
+        const initialFiltered = deduplicateStudents(INITIAL_STUDENTS.filter(s => !deletedSet.has(s.id))).uniqueStudents;
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(initialFiltered));
       }
-      const existingRecords = localStorage.getItem(STORAGE_KEYS.RECORDS);
-      if (!existingRecords) {
+
+      if (!localStorage.getItem(STORAGE_KEYS.RECORDS)) {
         localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(INITIAL_RECORDS));
       }
       if (!localStorage.getItem('edu_calendar_max_hours_middle')) {
@@ -403,13 +424,17 @@ export function ensureLatestDataVersion(): void {
       localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
       localStorage.setItem('edu_calendar_data_version', CURRENT_DATA_VERSION);
     } else {
-      // 이미 사용자가 쓰고 있는 상태: 혹시 삭제된 학생이 스토리지에 남아있다면 즉시 제거 정제
+      // 이미 최신 버전: 혹시 남아있는 삭제/중복 학생 정리
       const existingStudentsStr = localStorage.getItem(STORAGE_KEYS.STUDENTS);
       if (existingStudentsStr) {
         try {
           const parsed = JSON.parse(existingStudentsStr);
           if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter(s => !deletedSet.has(s.id));
+            const updated = parsed.map(s => {
+              if (s.name.trim() === '강주연') return { ...s, group: '중위권' as const };
+              return s;
+            });
+            const cleaned = deduplicateStudents(updated.filter(s => !deletedSet.has(s.id))).uniqueStudents;
             if (cleaned.length !== parsed.length) {
               localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cleaned));
             }
@@ -701,12 +726,22 @@ export async function fetchStudents(): Promise<Student[]> {
         .order('name', { ascending: true });
       
       if (!error && data) {
-        const rawStudents: Student[] = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          group: item.group as '중위권' | '1순위' | '기타',
-          createdAt: item.created_at
-        }));
+        const rawStudents: Student[] = data.map(item => {
+          let grp = item.group as '중위권' | '1순위' | '기타';
+          // 강주연 학생은 중위권으로 확실하게 정규화
+          if (item.name && item.name.trim() === '강주연') {
+            grp = '중위권';
+            if (item.group !== '중위권') {
+              client.from('students').update({ group: '중위권' }).eq('id', item.id).then(() => {}, (err: any) => console.error(err));
+            }
+          }
+          return {
+            id: item.id,
+            name: item.name,
+            group: grp,
+            createdAt: item.created_at
+          };
+        });
 
         // 만약 Supabase 원격 DB에 삭제된 학생이 남아있다면 원격 DB에서도 영구 삭제
         const zombiesInRemote = rawStudents.filter(s => deletedSet.has(s.id));

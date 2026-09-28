@@ -232,8 +232,10 @@
         const INITIAL_STUDENTS = [
             { id: 'student-1', name: '이솔빛나', group: '중위권', createdAt: new Date().toISOString() },
             { id: 'student-2', name: '황혜리', group: '중위권', createdAt: new Date().toISOString() },
-            { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() },
-            { id: 'student-4', name: '강주연', group: '1순위', createdAt: new Date().toISOString() }
+            { id: 'student-6', name: '이정', group: '중위권', createdAt: new Date().toISOString() },
+            { id: 'student-5', name: '엄호준', group: '중위권', createdAt: new Date().toISOString() },
+            { id: 'student-4', name: '강주연', group: '중위권', createdAt: new Date().toISOString() },
+            { id: 'student-3', name: '전성후', group: '1순위', createdAt: new Date().toISOString() }
         ];
 
         const SUPABASE_SQL_SETUP = `-- Supabase SQL Editor에 복사해서 붙여넣고 실행하세요!
@@ -278,13 +280,19 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             const removedIds = [];
 
             for (const s of studentsList) {
-                const key = `${s.name.trim()}_${s.group}`;
+                const key = s.name.trim();
                 if (!seen.has(key)) {
                     seen.set(key, s);
                 } else {
-                    const primary = seen.get(key);
-                    duplicateIdMap[s.id] = primary.id;
-                    removedIds.push(s.id);
+                    const existing = seen.get(key);
+                    if (key === '강주연' && s.group === '중위권') {
+                        duplicateIdMap[existing.id] = s.id;
+                        removedIds.push(existing.id);
+                        seen.set(key, s);
+                    } else {
+                        duplicateIdMap[s.id] = existing.id;
+                        removedIds.push(s.id);
+                    }
                 }
             }
 
@@ -340,12 +348,21 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                         .order('name', { ascending: true });
                     
                     if (!error && data) {
-                        const rawStudents = data.map(item => ({
-                            id: item.id,
-                            name: item.name,
-                            group: item.group,
-                            createdAt: item.created_at
-                        }));
+                        const rawStudents = data.map(item => {
+                            let grp = item.group;
+                            if (item.name && item.name.trim() === '강주연') {
+                                grp = '중위권';
+                                if (item.group !== '중위권') {
+                                    client.from('students').update({ group: '중위권' }).eq('id', item.id);
+                                }
+                            }
+                            return {
+                                id: item.id,
+                                name: item.name,
+                                group: grp,
+                                createdAt: item.created_at
+                            };
+                        });
 
                         const validStudents = rawStudents.filter(s => !deletedSet.has(s.id));
                         const { uniqueStudents, removedIds } = deduplicateStudents(validStudents);
