@@ -272,6 +272,12 @@
             };
         }
 
+        const DB_TABLES = {
+            STUDENTS: 'basic_students',
+            RECORDS: 'basic_records',
+            SETTINGS: 'basic_settings'
+        };
+
         const SUPABASE_SQL_SETUP = `-- Supabase SQL Editor에 복사해서 붙여넣고 실행하세요!
 
 -- 1. 학생(students) 테이블 생성
@@ -377,7 +383,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             if (client) {
                 try {
                     const { data, error } = await client
-                        .from('students')
+                        .from(DB_TABLES.STUDENTS)
                         .select('*')
                         .order('name', { ascending: true });
                     
@@ -387,7 +393,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                             if (item.name && item.name.trim() === '강주연') {
                                 grp = '중위권';
                                 if (item.group !== '중위권') {
-                                    client.from('students').update({ group: '중위권' }).eq('id', item.id);
+                                    client.from(DB_TABLES.STUDENTS).update({ group: '중위권' }).eq('id', item.id);
                                 }
                             }
                             return {
@@ -403,7 +409,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                         
                         if (removedIds.length > 0) {
                             try {
-                                await client.from('students').delete().in('id', removedIds);
+                                await client.from(DB_TABLES.STUDENTS).delete().in('id', removedIds);
                             } catch (_) {}
                         }
 
@@ -450,7 +456,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
                             group: s.group,
                             created_at: s.createdAt
                         }));
-                        await client.from('students').upsert(upsertData, { onConflict: 'id' });
+                        await client.from(DB_TABLES.STUDENTS).upsert(upsertData, { onConflict: 'id' });
                     }
                 } catch (e) {
                     console.error(e);
@@ -464,7 +470,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             const client = getSupabaseClient();
             if (client) {
                 try {
-                    await client.from('students').delete().eq('id', studentId);
+                    await client.from(DB_TABLES.STUDENTS).delete().eq('id', studentId);
                 } catch (e) {
                     console.error(e);
                 }
@@ -476,12 +482,13 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             const client = getSupabaseClient();
             if (client) {
                 try {
-                    const { data, error } = await client.from('records').select('*');
+                    const { data, error } = await client.from(DB_TABLES.RECORDS).select('*');
                     if (!error && data) {
                         const records = data.map(item => ({
                             id: item.date,
                             date: item.date,
                             studentIds: Array.isArray(item.student_ids) ? item.student_ids : JSON.parse(item.student_ids || '[]'),
+                            hours: typeof item.hours === 'object' && item.hours !== null ? item.hours : JSON.parse(item.hours || '{}'),
                             notes: typeof item.notes === 'object' && item.notes !== null ? item.notes : JSON.parse(item.notes || '{}'),
                             updatedAt: item.updated_at
                         }));
@@ -509,9 +516,10 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             const client = getSupabaseClient();
             if (client) {
                 try {
-                    await client.from('records').upsert({
+                    await client.from(DB_TABLES.RECORDS).upsert({
                         date: record.date,
                         student_ids: record.studentIds,
+                        hours: record.hours || {},
                         notes: record.notes,
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'date' });
@@ -526,11 +534,11 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             const client = getSupabaseClient();
             const keyName = group === '중위권' ? 'max_hours_middle' : 'max_hours_first';
             const storageKey = group === '중위권' ? STORAGE_KEYS.MAX_HOURS_MIDDLE : STORAGE_KEYS.MAX_HOURS_FIRST;
-            const defaultVal = group === '중위권' ? 20 : 30;
+            const defaultVal = 40;
 
             if (client) {
                 try {
-                    const { data, error } = await client.from('settings').select('value').eq('key', keyName).single();
+                    const { data, error } = await client.from(DB_TABLES.SETTINGS).select('value').eq('key', keyName).single();
                     if (!error && data) {
                         const val = parseInt(data.value, 10);
                         localStorage.setItem(storageKey, val.toString());
@@ -552,7 +560,7 @@ CREATE POLICY "Allow public read/write" ON settings FOR ALL USING (true) WITH CH
             const client = getSupabaseClient();
             if (client) {
                 try {
-                    await client.from('settings').upsert({ key: keyName, value: hours.toString() }, { onConflict: 'key' });
+                    await client.from(DB_TABLES.SETTINGS).upsert({ key: keyName, value: hours.toString() }, { onConflict: 'key' });
                 } catch (e) {
                     console.error(e);
                 }

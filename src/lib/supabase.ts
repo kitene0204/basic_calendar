@@ -61,6 +61,13 @@ const STORAGE_KEYS = {
   INITIALIZED: 'edu_calendar_initialized_v1'
 };
 
+// Supabase 테이블명 상수 (기본 portal 프로젝트의 basic_ 접두사 테이블 100% 매핑)
+export const DB_TABLES = {
+  STUDENTS: 'basic_students',
+  RECORDS: 'basic_records',
+  SETTINGS: 'basic_settings'
+};
+
 // 학생 구버전 ID -> Supabase DB 정규 ID 매핑
 export const STUDENT_ID_ALIASES: Record<string, string> = {
   'student-4': 'student-1790555167606', // 강주연
@@ -401,7 +408,7 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-2': '중위권 지도 (09:00~12:10, 4차시)', 'student-1': '중위권 지도 (09:00~12:10, 4차시)' }
   },
 
-  // ================= 9월 (1순위 8차시) =================
+  // ================= 9월 (학교 PC 실제 일지 100% 일치) =================
   {
     id: '2026-09-04',
     date: '2026-09-04',
@@ -413,8 +420,57 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
     id: '2026-09-07',
     date: '2026-09-07',
     studentIds: ['student-3'],
-    hours: { 'student-3': 4 },
+    hours: { 'student-3': 3 },
     notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
+  },
+  {
+    id: '2026-09-09',
+    date: '2026-09-09',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-14',
+    date: '2026-09-14',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-18',
+    date: '2026-09-18',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-21',
+    date: '2026-09-21',
+    studentIds: ['student-1790555167606'],
+    hours: { 'student-1790555167606': 1 },
+    notes: { 'student-1790555167606': '중위권 맞춤형 개별 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-22',
+    date: '2026-09-22',
+    studentIds: ['student-1790555167606', 'student-2'],
+    hours: { 'student-1790555167606': 1, 'student-2': 1 },
+    notes: { 'student-1790555167606': '중위권 지도 (1차시)', 'student-2': '중위권 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-23',
+    date: '2026-09-23',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-28',
+    date: '2026-09-28',
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' }
   }
 ];
 
@@ -741,7 +797,7 @@ export async function fetchStudents(): Promise<Student[]> {
       // 1. Supabase에서 삭제된 학생 목록이 세팅에 있다면 로컬과 병합
       try {
         const { data: remoteDeletedData } = await client
-          .from('settings')
+          .from(DB_TABLES.SETTINGS)
           .select('value')
           .eq('key', 'deleted_students')
           .single();
@@ -756,7 +812,7 @@ export async function fetchStudents(): Promise<Student[]> {
 
       // 2. 학생 목록 조회
       const { data, error } = await client
-        .from('students')
+        .from(DB_TABLES.STUDENTS)
         .select('*')
         .order('name', { ascending: true });
       
@@ -767,7 +823,7 @@ export async function fetchStudents(): Promise<Student[]> {
           if (item.name && item.name.trim() === '강주연') {
             grp = '중위권';
             if (item.group !== '중위권') {
-              client.from('students').update({ group: '중위권' }).eq('id', item.id).then(() => {}, (err: any) => console.error(err));
+              client.from(DB_TABLES.STUDENTS).update({ group: '중위권' }).eq('id', item.id).then(() => {}, (err: any) => console.error(err));
             }
           }
           return {
@@ -783,7 +839,7 @@ export async function fetchStudents(): Promise<Student[]> {
         if (zombiesInRemote.length > 0) {
           const zombieIds = zombiesInRemote.map(s => s.id);
           try {
-            await client.from('students').delete().in('id', zombieIds);
+            await client.from(DB_TABLES.STUDENTS).delete().in('id', zombieIds);
             console.log('Cleaned zombie students from remote DB:', zombieIds);
           } catch (cleanErr) {
             console.warn('Failed to clean remote zombies:', cleanErr);
@@ -797,7 +853,7 @@ export async function fetchStudents(): Promise<Student[]> {
         const { uniqueStudents, duplicateIdMap, removedIds } = deduplicateStudents(validStudents);
         if (removedIds.length > 0) {
           try {
-            await client.from('students').delete().in('id', removedIds);
+            await client.from(DB_TABLES.STUDENTS).delete().in('id', removedIds);
             console.log('Cleaned duplicate student entries from DB:', removedIds);
           } catch (dupErr) {
             console.warn('Failed to clean duplicate students:', dupErr);
@@ -845,7 +901,7 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
         }));
 
         const { error } = await client
-          .from('students')
+          .from(DB_TABLES.STUDENTS)
           .upsert(upsertData, { onConflict: 'id' });
 
         if (error) {
@@ -856,7 +912,7 @@ export async function saveStudents(students: Student[]): Promise<boolean> {
 
       // Supabase settings 테이블에 삭제된 학생 목록 동기화
       if (deletedSet.size > 0) {
-        await client.from('settings').upsert({
+        await client.from(DB_TABLES.SETTINGS).upsert({
           key: 'deleted_students',
           value: JSON.stringify(Array.from(deletedSet))
         }, { onConflict: 'key' });
@@ -895,12 +951,12 @@ export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
   if (client) {
     try {
       const { error } = await client
-        .from('students')
+        .from(DB_TABLES.STUDENTS)
         .delete()
         .eq('id', studentId);
       
       const deletedSet = getDeletedStudentIds();
-      await client.from('settings').upsert({
+      await client.from(DB_TABLES.SETTINGS).upsert({
         key: 'deleted_students',
         value: JSON.stringify(Array.from(deletedSet))
       }, { onConflict: 'key' });
@@ -923,7 +979,7 @@ export async function fetchRecords(): Promise<TeachingRecord[]> {
   if (client) {
     try {
       const { data, error } = await client
-        .from('records')
+        .from(DB_TABLES.RECORDS)
         .select('*');
       
       if (!error && data) {
@@ -1017,14 +1073,14 @@ export async function saveRecord(record: TeachingRecord): Promise<boolean> {
       };
 
       const { error: upsertError } = await client
-        .from('records')
+        .from(DB_TABLES.RECORDS)
         .upsert(payload, { onConflict: 'date' });
 
       if (upsertError) {
         console.error('Supabase record upsert error:', upsertError);
         // Fallback: 혹시 hours 컬럼 없는 경우
         const { hours, ...fallbackPayload } = payload;
-        const res2 = await client.from('records').upsert(fallbackPayload, { onConflict: 'date' });
+        const res2 = await client.from(DB_TABLES.RECORDS).upsert(fallbackPayload, { onConflict: 'date' });
         if (res2.error) {
           console.error('Supabase fallback error:', res2.error);
           return false;
@@ -1063,7 +1119,7 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
       });
 
       let { error } = await client
-        .from('records')
+        .from(DB_TABLES.RECORDS)
         .upsert(batchPayload, { onConflict: 'date' });
 
       if (error) {
@@ -1072,7 +1128,7 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
           const { hours, ...rest } = p;
           return rest;
         });
-        await client.from('records').upsert(fallbackPayload, { onConflict: 'date' });
+        await client.from(DB_TABLES.RECORDS).upsert(fallbackPayload, { onConflict: 'date' });
       }
       return true;
     } catch (e) {
@@ -1093,7 +1149,7 @@ export async function fetchMaxHours(group: '중위권' | '1순위'): Promise<num
   if (client) {
     try {
       const { data, error } = await client
-        .from('settings')
+        .from(DB_TABLES.SETTINGS)
         .select('value')
         .eq('key', keyName)
         .single();
@@ -1121,7 +1177,7 @@ export async function saveMaxHours(group: '중위권' | '1순위', hours: number
   if (client) {
     try {
       await client
-        .from('settings')
+        .from(DB_TABLES.SETTINGS)
         .upsert({
           key: keyName,
           value: hours.toString()
@@ -1170,13 +1226,19 @@ export function subscribeToRealtimeChanges(onRemoteChange: () => void): () => vo
   try {
     const channel = client
       .channel('edu_calendar_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.RECORDS }, () => {
+        onRemoteChange();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.STUDENTS }, () => {
+        onRemoteChange();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.SETTINGS }, () => {
+        onRemoteChange();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'records' }, () => {
         onRemoteChange();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
-        onRemoteChange();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
         onRemoteChange();
       })
       .subscribe();
