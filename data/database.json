@@ -1,0 +1,541 @@
+{
+  "students": [
+    {
+      "id": "student-1",
+      "name": "이솔빛나",
+      "group": "중위권",
+      "createdAt": "2026-08-28T06:56:25.703Z"
+    },
+    {
+      "id": "student-2",
+      "name": "황혜리",
+      "group": "중위권",
+      "createdAt": "2026-08-28T06:56:25.703Z"
+    },
+    {
+      "id": "student-6",
+      "name": "이정",
+      "group": "중위권",
+      "createdAt": "2026-08-28T06:56:25.703Z"
+    },
+    {
+      "id": "student-5",
+      "name": "엄호준",
+      "group": "중위권",
+      "createdAt": "2026-08-28T06:56:25.703Z"
+    },
+    {
+      "id": "student-3",
+      "name": "전성후",
+      "group": "1순위",
+      "createdAt": "2026-08-28T06:56:25.703Z"
+    },
+    {
+      "id": "student-4",
+      "name": "강주연",
+      "group": "중위권",
+      "createdAt": "2026-08-28T06:56:25.703Z"
+    }
+  ],
+  "records": [
+    {
+      "id": "2026-05-06",
+      "date": "2026-05-06",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-05-11",
+      "date": "2026-05-11",
+      "studentIds": [
+        "student-4"
+      ],
+      "hours": {
+        "student-4": 1
+      },
+      "notes": {
+        "student-4": "1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-05-13",
+      "date": "2026-05-13",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-05-15",
+      "date": "2026-05-15",
+      "studentIds": [
+        "student-1782781087573"
+      ],
+      "hours": {
+        "student-1782781087573": 1
+      },
+      "notes": {
+        "student-1782781087573": "중위권 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-05-18",
+      "date": "2026-05-18",
+      "studentIds": [
+        "student-2",
+        "student-1782781087573"
+      ],
+      "hours": {
+        "student-2": 1,
+        "student-1782781087573": 1
+      },
+      "notes": {
+        "student-2": "",
+        "student-1782781087573": ""
+      }
+    },
+    {
+      "id": "2026-05-20",
+      "date": "2026-05-20",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-01",
+      "date": "2026-06-01",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-05",
+      "date": "2026-06-05",
+      "studentIds": [
+        "student-3",
+        "student-4"
+      ],
+      "hours": {
+        "student-3": 1,
+        "student-4": 1
+      },
+      "notes": {
+        "student-3": "1순위 지도 (14:40~15:30, 1차시)",
+        "student-4": "1순위 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-08",
+      "date": "2026-06-08",
+      "studentIds": [
+        "student-2",
+        "student-6"
+      ],
+      "hours": {
+        "student-2": 1,
+        "student-6": 1
+      },
+      "notes": {
+        "student-2": "중위권 맞춤형 지도 (14:40~15:20, 1차시)",
+        "student-6": "중위권 맞춤형 지도 (14:40~15:20, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-10",
+      "date": "2026-06-10",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (13:50~14:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-12",
+      "date": "2026-06-12",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-15",
+      "date": "2026-06-15",
+      "studentIds": [
+        "student-2",
+        "student-6"
+      ],
+      "hours": {
+        "student-2": 1,
+        "student-6": 1
+      },
+      "notes": {
+        "student-2": "중위권 맞춤형 지도 (14:40~15:20, 1차시)",
+        "student-6": "중위권 맞춤형 지도 (14:40~15:20, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-18",
+      "date": "2026-06-18",
+      "studentIds": [
+        "student-2",
+        "student-6"
+      ],
+      "hours": {
+        "student-2": 1,
+        "student-6": 1
+      },
+      "notes": {
+        "student-2": "중위권 맞춤형 지도 (14:40~15:20, 1차시)",
+        "student-6": "중위권 맞춤형 지도 (14:40~15:20, 1차시)"
+      }
+    },
+    {
+      "id": "2026-06-19",
+      "date": "2026-06-19",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-07-03",
+      "date": "2026-07-03",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-07-06",
+      "date": "2026-07-06",
+      "studentIds": [
+        "student-1782781087573"
+      ],
+      "hours": {
+        "student-1782781087573": 1
+      },
+      "notes": {
+        "student-1782781087573": "중위권 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-07-14",
+      "date": "2026-07-14",
+      "studentIds": [
+        "student-4"
+      ],
+      "hours": {
+        "student-4": 1
+      },
+      "notes": {
+        "student-4": "1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)"
+      }
+    },
+    {
+      "id": "2026-07-31",
+      "date": "2026-07-31",
+      "studentIds": [
+        "student-2",
+        "student-1"
+      ],
+      "hours": {
+        "student-2": 4,
+        "student-1": 4
+      },
+      "notes": {
+        "student-2": "중위권 지도 (09:00~12:10, 4차시)",
+        "student-1": "중위권 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-04",
+      "date": "2026-08-04",
+      "studentIds": [
+        "student-2",
+        "student-1"
+      ],
+      "hours": {
+        "student-2": 4,
+        "student-1": 4
+      },
+      "notes": {
+        "student-2": "중위권 지도 (13:00~16:10, 4차시)",
+        "student-1": "중위권 지도 (13:00~16:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-05",
+      "date": "2026-08-05",
+      "studentIds": [
+        "student-2"
+      ],
+      "hours": {
+        "student-2": 4
+      },
+      "notes": {
+        "student-2": "중위권 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-06",
+      "date": "2026-08-06",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 4
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-07",
+      "date": "2026-08-07",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 4
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-18",
+      "date": "2026-08-18",
+      "studentIds": [
+        "student-2"
+      ],
+      "hours": {
+        "student-2": 4
+      },
+      "notes": {
+        "student-2": "중위권 개별 지도 (13:00~16:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-24",
+      "date": "2026-08-24",
+      "studentIds": [
+        "student-1"
+      ],
+      "hours": {
+        "student-1": 4
+      },
+      "notes": {
+        "student-1": "중위권 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-26",
+      "date": "2026-08-26",
+      "studentIds": [
+        "student-1"
+      ],
+      "hours": {
+        "student-1": 4
+      },
+      "notes": {
+        "student-1": "중위권 개별 지도 (13:00~16:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-28",
+      "date": "2026-08-28",
+      "studentIds": [
+        "student-5"
+      ],
+      "hours": {
+        "student-5": 4
+      },
+      "notes": {
+        "student-5": "중위권 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-08-31",
+      "date": "2026-08-31",
+      "studentIds": [
+        "student-2",
+        "student-1"
+      ],
+      "hours": {
+        "student-2": 4,
+        "student-1": 4
+      },
+      "notes": {
+        "student-2": "중위권 지도 (09:00~12:10, 4차시)",
+        "student-1": "중위권 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-09-04",
+      "date": "2026-09-04",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 4
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-09-07",
+      "date": "2026-09-07",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 4
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)"
+      }
+    },
+    {
+      "id": "2026-09-09",
+      "date": "2026-09-09",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-09-14",
+      "date": "2026-09-14",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-09-18",
+      "date": "2026-09-18",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-09-21",
+      "date": "2026-09-21",
+      "studentIds": [
+        "student-1790555167606"
+      ],
+      "hours": {
+        "student-1790555167606": 1
+      },
+      "notes": {
+        "student-1790555167606": "중위권 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-09-22",
+      "date": "2026-09-22",
+      "studentIds": [
+        "student-1790555167606",
+        "student-2"
+      ],
+      "hours": {
+        "student-1790555167606": 1,
+        "student-2": 1
+      },
+      "notes": {
+        "student-1790555167606": "중위권 지도 (1차시)",
+        "student-2": "중위권 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-09-23",
+      "date": "2026-09-23",
+      "studentIds": [
+        "student-3"
+      ],
+      "hours": {
+        "student-3": 1
+      },
+      "notes": {
+        "student-3": "1순위 맞춤형 개별 지도 (1차시)"
+      }
+    },
+    {
+      "id": "2026-09-28",
+      "date": "2026-09-28",
+      "studentIds": [
+        "student-1790555167606"
+      ],
+      "hours": {
+        "student-1790555167606": 1
+      },
+      "notes": {
+        "student-1790555167606": "중위권 맞춤형 개별 지도 (1차시)"
+      }
+    }
+  ],
+  "maxHoursMiddle": 40,
+  "maxHoursFirst": 40,
+  "version": 8,
+  "updatedAt": "2026-09-28T12:35:40.888Z"
+}

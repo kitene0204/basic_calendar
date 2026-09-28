@@ -9,6 +9,17 @@ export const PORTAL_PROJECT_URL = 'https://lqajnsqoovngfgabalkj.supabase.co';
 export const PORTAL_PROJECT_ANON_KEY = 'sb_publishable_DcAlnHgLYSd92ICS66z3RA_DvrzyPhX';
 
 let supabaseInstance: SupabaseClient | null = null;
+let portalInstance: SupabaseClient | null = null;
+
+// 포털 기본 클라이언트 항상 가용하도록 보장
+export function getPortalClient(): SupabaseClient {
+  if (!portalInstance) {
+    portalInstance = createClient(PORTAL_PROJECT_URL, PORTAL_PROJECT_ANON_KEY, {
+      auth: { persistSession: true }
+    });
+  }
+  return portalInstance;
+}
 
 // 로컬스토리지에서 사용자 지정 Supabase 설정 로드 (기본값: portal 프로젝트)
 export function getSupabaseCredentials() {
@@ -39,10 +50,10 @@ export function getSupabaseClient(): SupabaseClient | null {
       return supabaseInstance;
     } catch (e) {
       console.error('Supabase Client initialization failed:', e);
-      return null;
+      return getPortalClient();
     }
   }
-  return null;
+  return getPortalClient();
 }
 
 export function resetSupabaseClient() {
@@ -218,7 +229,7 @@ export function markStudentDeleted(studentId: string): void {
 }
 
 // 최신 데이터 버전 관리 키 (모든 브라우저의 기본 URL 접속 시 최신 데이터 자동 동기화 보장)
-export const CURRENT_DATA_VERSION = '2026-09-28-v17-kang-middle-sync';
+export const CURRENT_DATA_VERSION = '2026-09-28-v19-complete-cloud-sync';
 
 // 초기 기본 학생 명단 (실제 Supabase DB 학생 테이블과 100% 일치)
 export const INITIAL_STUDENTS: Student[] = [
@@ -468,9 +479,9 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
   {
     id: '2026-09-28',
     date: '2026-09-28',
-    studentIds: ['student-3'],
-    hours: { 'student-3': 1 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' }
+    studentIds: ['student-1790555167606'],
+    hours: { 'student-1790555167606': 1 },
+    notes: { 'student-1790555167606': '중위권 맞춤형 개별 지도 (1차시)' }
   }
 ];
 
@@ -503,9 +514,32 @@ export function ensureLatestDataVersion(): void {
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(initialFiltered));
       }
 
-      if (!localStorage.getItem(STORAGE_KEYS.RECORDS)) {
+      // 기존 로컬 기록이 있다면 INITIAL_RECORDS와 병합하여 9월 기록(9, 14, 18, 21, 22, 23, 28 등) 즉시 복원
+      const existingRecordsStr = localStorage.getItem(STORAGE_KEYS.RECORDS);
+      if (existingRecordsStr) {
+        try {
+          const parsed = JSON.parse(existingRecordsStr);
+          if (Array.isArray(parsed)) {
+            const dateMap = new Map<string, TeachingRecord>();
+            INITIAL_RECORDS.forEach(r => dateMap.set(r.date, r));
+            parsed.forEach(r => {
+              const current = dateMap.get(r.date);
+              if (!current || (r.studentIds && r.studentIds.length > 0)) {
+                dateMap.set(r.date, r);
+              }
+            });
+            const merged = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+          } else {
+            localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(INITIAL_RECORDS));
+          }
+        } catch (_) {
+          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(INITIAL_RECORDS));
+        }
+      } else {
         localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(INITIAL_RECORDS));
       }
+
       if (!localStorage.getItem('edu_calendar_max_hours_middle')) {
         localStorage.setItem('edu_calendar_max_hours_middle', '40');
       }
@@ -811,10 +845,20 @@ export async function fetchStudents(): Promise<Student[]> {
       } catch (_) {}
 
       // 2. 학생 목록 조회
-      const { data, error } = await client
+      let { data, error } = await client
         .from(DB_TABLES.STUDENTS)
         .select('*')
         .order('name', { ascending: true });
+
+      // 커스텀 클라이언트 실패 시 포털 기본 클라이언트로 즉각 재시도
+      if (error || !data || data.length === 0) {
+        const portal = getPortalClient();
+        const retryRes = await portal.from(DB_TABLES.STUDENTS).select('*').order('name', { ascending: true });
+        if (!retryRes.error && retryRes.data && retryRes.data.length > 0) {
+          data = retryRes.data;
+          error = null;
+        }
+      }
       
       if (!error && data) {
         const rawStudents: Student[] = data.map(item => {
@@ -975,12 +1019,22 @@ export async function deleteStudentFromDb(studentId: string): Promise<boolean> {
 
 // 3. 기록 가져오기
 export async function fetchRecords(): Promise<TeachingRecord[]> {
-  const client = getSupabaseClient();
+  const client = getSupabaseClient() || getPortalClient();
   if (client) {
     try {
-      const { data, error } = await client
+      let { data, error } = await client
         .from(DB_TABLES.RECORDS)
         .select('*');
+
+      // 커스텀 클라이언트 실패 시 포털 기본 클라이언트로 즉각 재시도
+      if (error || !data || data.length === 0) {
+        const portal = getPortalClient();
+        const retryRes = await portal.from(DB_TABLES.RECORDS).select('*');
+        if (!retryRes.error && retryRes.data && retryRes.data.length > 0) {
+          data = retryRes.data;
+          error = null;
+        }
+      }
       
       if (!error && data) {
         const records: TeachingRecord[] = data.map(item => {
@@ -1141,18 +1195,31 @@ export async function saveRecordsBatch(recordsList: TeachingRecord[]): Promise<b
 
 // 5. 최대 지도 시수 로드
 export async function fetchMaxHours(group: '중위권' | '1순위'): Promise<number> {
-  const client = getSupabaseClient();
+  const client = getSupabaseClient() || getPortalClient();
   const keyName = group === '중위권' ? 'max_hours_middle' : 'max_hours_first';
   const storageKey = group === '중위권' ? 'edu_calendar_max_hours_middle' : 'edu_calendar_max_hours_first';
   const defaultVal = 40;
 
   if (client) {
     try {
-      const { data, error } = await client
+      let { data, error } = await client
         .from(DB_TABLES.SETTINGS)
         .select('value')
         .eq('key', keyName)
         .single();
+
+      if (error || !data) {
+        const portal = getPortalClient();
+        const retryRes = await portal
+          .from(DB_TABLES.SETTINGS)
+          .select('value')
+          .eq('key', keyName)
+          .single();
+        if (!retryRes.error && retryRes.data) {
+          data = retryRes.data;
+          error = null;
+        }
+      }
       
       if (!error && data) {
         const val = parseInt(data.value, 10);

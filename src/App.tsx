@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   HelpCircle,
   CloudLightning,
-  Share2
+  Share2,
+  Download,
+  Upload
 } from 'lucide-react';
 import { Student, TeachingRecord } from './types';
 import { 
@@ -297,36 +299,74 @@ export default function App() {
         {/* 탭 컨트롤러 & 클라우드 상태 */}
         <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
           
-          {/* 전체 기기(학교 컴퓨터 & 스마트폰) 즉시 동기화 버튼 */}
+          {/* 1. 클라우드에서 불러오기 (Pull) 버튼 */}
           <button
             onClick={async () => {
               setIsSyncing(true);
-              // 1. 서버 중앙 실시간 저장소로 즉시 전송
-              const serverRes = await syncLocalToServer(students, records, maxHoursMiddle, maxHoursFirst);
-              if (serverRes) {
-                setStudents(serverRes.students);
-                setRecords(serverRes.records);
+              try {
+                const [cloudStudents, cloudRecords, midH, firstH] = await Promise.all([
+                  fetchStudents(),
+                  fetchRecords(),
+                  fetchMaxHours('중위권'),
+                  fetchMaxHours('1순위')
+                ]);
+
+                if (cloudRecords && cloudRecords.length > 0) {
+                  setStudents(cloudStudents);
+                  setRecords(cloudRecords);
+                  setMaxHoursMiddle(midH);
+                  setMaxHoursFirst(firstH);
+                  setSyncNotice(`📥 클라우드에서 최신 데이터(학생 ${cloudStudents.length}명, 지도 기록 ${cloudRecords.length}일치)를 성공적으로 불러왔습니다!`);
+                } else {
+                  setSyncNotice('📥 클라우드에 저장된 기록이 없습니다.');
+                }
+              } catch (err) {
+                console.error('Pull error:', err);
+                setSyncNotice('⚠️ 불러오기 중 통신 오류가 발생했습니다.');
+              } finally {
+                setIsSyncing(false);
+                setTimeout(() => setSyncNotice(null), 4000);
               }
-              // 2. Supabase 설정 시 Supabase로도 전송
-              if (isSupabaseEnabled) {
-                await syncAllToCloud();
-              }
-              setIsSyncing(false);
-              setSyncNotice('☁️ 학교 컴퓨터의 모든 데이터가 스마트폰 및 다른 기기에 100% 실시간 동기화되었습니다!');
-              setTimeout(() => setSyncNotice(null), 5000);
             }}
             disabled={isSyncing}
-            className="px-2 sm:px-3 py-1.5 sm:py-2 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] shadow-emerald-500/20 active:scale-95"
-            title="클릭 시 현재 기기의 모든 데이터를 스마트폰 및 다른 컴퓨터로 즉시 실시간 동기화합니다"
-            id="btn-trigger-supabase-sync"
+            className="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 font-extrabold text-[11px] sm:text-xs rounded-xl border border-sky-200/80 shadow-2xs flex items-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
+            title="학교/클라우드에 저장된 최신 데이터를 이 화면으로 불러옵니다 (Pull)"
+            id="btn-pull-cloud-data"
           >
-            <CloudLightning size={14} className={isSyncing ? 'animate-bounce shrink-0' : 'shrink-0'} />
-            <span className="font-black">
-              {isSyncing ? '동기화 중...' : (
-                <>
-                  <span className="hidden sm:inline">실시간 </span>동기화
-                </>
-              )}
+            <Download size={13} className={`sm:w-3.5 sm:h-3.5 stroke-[2.5] text-sky-600 shrink-0 ${isSyncing ? 'animate-bounce' : ''}`} />
+            <span className="font-extrabold">
+              <span className="hidden sm:inline">불러오기 </span>(Pull)
+            </span>
+          </button>
+
+          {/* 2. 클라우드로 내보내기 (Push) 버튼 */}
+          <button
+            onClick={async () => {
+              setIsSyncing(true);
+              try {
+                const res = await syncAllToCloud();
+                if (res.success) {
+                  setSyncNotice(`📤 현재 기기의 데이터(학생 ${students.length}명, 지도 기록 ${records.length}건)를 클라우드에 안전하게 저장했습니다!`);
+                } else {
+                  setSyncNotice(`⚠️ 클라우드 저장 실패: ${res.error || '알 수 없는 오류'}`);
+                }
+                syncLocalToServer(students, records, maxHoursMiddle, maxHoursFirst).catch(() => {});
+              } catch (err) {
+                console.error('Push error:', err);
+                setSyncNotice('⚠️ 내보내기 중 오류가 발생했습니다.');
+              } finally {
+                setIsSyncing(false);
+                setTimeout(() => setSyncNotice(null), 4000);
+              }
+            }}
+            disabled={isSyncing}
+            className="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-xs flex items-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 shadow-emerald-600/20"
+            title="현재 기기에서 작성/수정한 데이터를 클라우드로 즉시 저장합니다 (Push)"
+            id="btn-push-cloud-data"
+          >
+            <Upload size={13} className={`sm:w-3.5 sm:h-3.5 stroke-[2.5] text-white shrink-0 ${isSyncing ? 'animate-bounce' : ''}`} />
+            <span className="font-extrabold">
+              <span className="hidden sm:inline">저장하기 </span>(Push)
             </span>
           </button>
 

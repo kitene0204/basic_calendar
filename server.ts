@@ -69,7 +69,7 @@ const INITIAL_RECORDS = [
   { id: '2026-09-21', date: '2026-09-21', studentIds: ['student-1790555167606'], hours: { 'student-1790555167606': 1 }, notes: { 'student-1790555167606': '중위권 맞춤형 개별 지도 (1차시)' } },
   { id: '2026-09-22', date: '2026-09-22', studentIds: ['student-1790555167606', 'student-2'], hours: { 'student-1790555167606': 1, 'student-2': 1 }, notes: { 'student-1790555167606': '중위권 지도 (1차시)', 'student-2': '중위권 지도 (1차시)' } },
   { id: '2026-09-23', date: '2026-09-23', studentIds: ['student-3'], hours: { 'student-3': 1 }, notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' } },
-  { id: '2026-09-28', date: '2026-09-28', studentIds: ['student-3'], hours: { 'student-3': 1 }, notes: { 'student-3': '1순위 맞춤형 개별 지도 (1차시)' } }
+  { id: '2026-09-28', date: '2026-09-28', studentIds: ['student-1790555167606'], hours: { 'student-1790555167606': 1 }, notes: { 'student-1790555167606': '중위권 맞춤형 개별 지도 (1차시)' } }
 ];
 
 interface DatabaseSchema {
