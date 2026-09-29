@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, BookOpen, Users, Award, Search, ArrowRight, TrendingUp, Filter } from 'lucide-react';
 import { Student, TeachingRecord } from '../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { calculateTeachingHours } from '../lib/teachingHours';
 
 interface DashboardProps {
   students: Student[];
@@ -45,15 +46,13 @@ export default function Dashboard({
     };
   });
 
-  // 2. 전체 통계 요약
+  // 2. 전체 통계 요약 (동시간대 그룹 지도 반영 시수 계산)
   const totalStudents = students.length;
   const totalMiddleStudents = students.filter(s => s.group === '중위권').length;
   const totalFirstStudents = students.filter(s => s.group === '1순위').length;
   
-  // 총 누적 지도 시수 (모든 학생이 이수한 총 수업 시간의 합)
-  const totalTeachingHours = records.reduce((sum, r) => {
-    return sum + r.studentIds.reduce((subSum, sid) => subSum + (r.hours?.[sid] ?? 1), 0);
-  }, 0);
+  // 총 누적 지도 시수 및 그룹별 진행/남은 시수 (동시간 그룹 수업 1시간 카운팅 완벽 반영)
+  const teachingHoursSummary = calculateTeachingHours(records, students, maxHoursMiddle, maxHoursFirst);
 
   // 3. 필터링된 학생 리스트
   const filteredStudents = studentStats.filter(s => {
@@ -89,47 +88,43 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* 누적 지도 차시 */}
+        {/* 누적 지도 차시 (선생님 실제 운영 차시) */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl">
             <Calendar size={24} />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-semibold block">누적 지도 차시</span>
-            <span className="text-xl font-black text-slate-800">{totalTeachingHours}차시</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">총 {records.length}일간 진행됨</span>
+            <span className="text-xs text-slate-400 font-semibold block">실제 누적 지도 차시</span>
+            <span className="text-xl font-black text-slate-800">{teachingHoursSummary.totalTeachingHours}차시</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">중위권 {teachingHoursSummary.middleTeachingHours} + 1순위 {teachingHoursSummary.firstTeachingHours} (동시간 반영)</span>
           </div>
         </div>
 
-        {/* 중위권 지도율 */}
+        {/* 중위권 진행 및 남은 차시 */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-[#00B4D8]/10 text-[#00B4D8] rounded-xl">
             <TrendingUp size={24} />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-semibold block">중위권 평균 진도율</span>
-            <span className="text-xl font-black text-slate-800">
-              {totalMiddleStudents > 0 
-                ? Math.round(studentStats.filter(s => s.group === '중위권').reduce((acc, cur) => acc + cur.progress, 0) / totalMiddleStudents) 
-                : 0}%
+            <span className="text-xs text-slate-400 font-semibold block">중위권 지도 현황</span>
+            <span className="text-xl font-black text-[#00B4D8]">
+              {teachingHoursSummary.middleTeachingHours}차시 <span className="text-xs text-slate-400 font-medium">/ 남은 {teachingHoursSummary.middleRemaining}차시</span>
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}차시 기준</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursMiddle}차시 기준 · 진도율 {teachingHoursSummary.middleProgress}%</span>
           </div>
         </div>
 
-        {/* 1순위 지도율 */}
+        {/* 1순위 진행 및 남은 차시 */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
           <div className="p-3 bg-[#FF4D6D]/10 text-[#FF4D6D] rounded-xl">
             <Award size={24} />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-semibold block">1순위 평균 진도율</span>
-            <span className="text-xl font-black text-slate-800">
-              {totalFirstStudents > 0 
-                ? Math.round(studentStats.filter(s => s.group === '1순위').reduce((acc, cur) => acc + cur.progress, 0) / totalFirstStudents) 
-                : 0}%
+            <span className="text-xs text-slate-400 font-semibold block">1순위 지도 현황</span>
+            <span className="text-xl font-black text-[#FF4D6D]">
+              {teachingHoursSummary.firstTeachingHours}차시 <span className="text-xs text-slate-400 font-medium">/ 남은 {teachingHoursSummary.firstRemaining}차시</span>
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}차시 기준</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">목표 {maxHoursFirst}차시 기준 · 진도율 {teachingHoursSummary.firstProgress}%</span>
           </div>
         </div>
       </div>

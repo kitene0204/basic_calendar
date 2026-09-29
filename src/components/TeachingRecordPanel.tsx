@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle, BookOpen, Clock, Plus, Minus } from 'lucide-react';
 import { Student, TeachingRecord } from '../types';
+import { calculateDayHours } from '../lib/teachingHours';
 
 interface TeachingRecordPanelProps {
   selectedDate: string; // 'YYYY-MM-DD'
@@ -112,8 +113,15 @@ export default function TeachingRecordPanel({
   const firstStudents = students.filter(s => s.group === '1순위');
   const otherStudents = students.filter(s => s.group === '기타');
 
-  // 오늘 지도 총 시수 계산
-  const totalDayHours = currentStudentIds.reduce((sum, id) => sum + (currentHours[id] || 1), 0);
+  // 오늘 지도 총 시수 계산 (동시간대 그룹 수업 반영: 같은 그룹 학생들을 함께 지도해도 1시간으로 카운팅)
+  const {
+    dayMiddleHours,
+    dayFirstHours,
+    dayOtherHours,
+    totalDayHours,
+    selectedMiddleCount,
+    selectedFirstCount
+  } = calculateDayHours(currentStudentIds, currentHours, students);
 
   return (
     <div className="bg-white h-full rounded-2xl shadow-xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]" id="record-panel">
@@ -125,13 +133,21 @@ export default function TeachingRecordPanel({
               {formatDateKorean(selectedDate)}
             </h2>
             {currentStudentIds.length > 0 && (
-              <span className="bg-indigo-50 text-[#727CF5] font-black text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full border border-indigo-100 flex items-center space-x-1">
-                <Clock size={11} className="stroke-[2.5]" />
-                <span>총 {currentStudentIds.length}명 · {totalDayHours}차시</span>
+              <span className="bg-indigo-50 text-[#727CF5] font-black text-[11px] sm:text-xs px-2.5 py-1 rounded-full border border-indigo-100 flex items-center space-x-1.5 shadow-2xs">
+                <Clock size={12} className="stroke-[2.5]" />
+                <span>
+                  총 {currentStudentIds.length}명 · {totalDayHours}차시 운영
+                  {selectedMiddleCount > 1 && dayFirstHours === 0 && (
+                    <span className="text-indigo-400 font-bold ml-1">(중위권 {selectedMiddleCount}명 동시간 지도)</span>
+                  )}
+                  {selectedMiddleCount > 0 && selectedFirstCount > 0 && (
+                    <span className="text-indigo-400 font-bold ml-1">(중위권 {dayMiddleHours}차시 + 1순위 {dayFirstHours}차시)</span>
+                  )}
+                </span>
               </span>
             )}
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">지도한 학생과 운영 차시를 선택하세요.</p>
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">지도한 학생과 운영 차시를 선택하세요. (동시간대 지도는 1차시로 자동 합산)</p>
         </div>
         <button
           onClick={() => {
@@ -184,6 +200,11 @@ export default function TeachingRecordPanel({
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#00B4D8]" />
               <h3 className="text-sm font-bold text-[#00B4D8]">중위권</h3>
+              {selectedMiddleCount > 0 && (
+                <span className="text-[11px] font-black text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100">
+                  {selectedMiddleCount > 1 ? `${selectedMiddleCount}명 동시간 지도 · ` : ''}{dayMiddleHours}차시
+                </span>
+              )}
             </div>
             <span className="text-[11px] text-slate-400">클릭하여 선택/해제</span>
           </div>
@@ -228,6 +249,11 @@ export default function TeachingRecordPanel({
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#FF4D6D]" />
               <h3 className="text-sm font-bold text-[#FF4D6D]">1순위</h3>
+              {selectedFirstCount > 0 && (
+                <span className="text-[11px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+                  {selectedFirstCount > 1 ? `${selectedFirstCount}명 동시간 지도 · ` : ''}{dayFirstHours}차시
+                </span>
+              )}
             </div>
             <span className="text-[11px] text-slate-400">클릭하여 선택/해제</span>
           </div>

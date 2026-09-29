@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle2, Settings } from 'lucide-react';
 import { Student, TeachingRecord } from '../types';
+import { calculateTeachingHours } from '../lib/teachingHours';
 
 interface CalendarProps {
   students: Student[];
@@ -70,33 +71,13 @@ export default function Calendar({
   const middleStudents = students.filter(s => s.group === '중위권');
   const firstStudents = students.filter(s => s.group === '1순위');
 
-  // 누적 지도 시수(시간) 계산
-  // 날짜별로 중위권 학생 지도 시간 중 최대 시간(동시간 수업) 및 1순위 학생 지도 시간 중 최대 시간을 일자별 합산
-  let middleTeachingHours = 0;
-  let firstTeachingHours = 0;
-
-  records.forEach(record => {
-    let dayMiddleHours = 0;
-    let dayFirstHours = 0;
-
-    record.studentIds.forEach(sid => {
-      const student = students.find(s => s.id === sid);
-      const hours = record.hours?.[sid] ?? 1;
-      if (student) {
-        if (student.group === '중위권') {
-          dayMiddleHours = Math.max(dayMiddleHours, hours);
-        } else if (student.group === '1순위') {
-          dayFirstHours = Math.max(dayFirstHours, hours);
-        }
-      }
-    });
-
-    middleTeachingHours += dayMiddleHours;
-    firstTeachingHours += dayFirstHours;
-  });
-
-  const middleRemaining = Math.max(0, maxHoursMiddle - middleTeachingHours);
-  const firstRemaining = Math.max(0, maxHoursFirst - firstTeachingHours);
+  // 누적 지도 시수(시간) 계산 (동시간대 그룹 수업 반영)
+  const {
+    middleTeachingHours,
+    firstTeachingHours,
+    middleRemaining,
+    firstRemaining
+  } = calculateTeachingHours(records, students, maxHoursMiddle, maxHoursFirst);
 
   // 요일 헤더
   const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];

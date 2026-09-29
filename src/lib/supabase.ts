@@ -254,9 +254,9 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
   {
     id: '2026-05-11',
     date: '2026-05-11',
-    studentIds: ['student-4'],
-    hours: { 'student-4': 1 },
-    notes: { 'student-4': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
   },
   {
     id: '2026-05-13',
@@ -284,9 +284,9 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
   {
     id: '2026-06-05',
     date: '2026-06-05',
-    studentIds: ['student-3', 'student-4'],
-    hours: { 'student-3': 1, 'student-4': 1 },
-    notes: { 'student-3': '1순위 지도 (14:40~15:30, 1차시)', 'student-4': '1순위 지도 (14:40~15:30, 1차시)' }
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 지도 (14:40~15:30, 1차시)' }
   },
   {
     id: '2026-06-08',
@@ -331,7 +331,7 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
     notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
   },
 
-  // ================= 7월 (1순위 2차시 + 중위권 4차시) =================
+  // ================= 7월 =================
   {
     id: '2026-07-03',
     date: '2026-07-03',
@@ -342,97 +342,97 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
   {
     id: '2026-07-14',
     date: '2026-07-14',
-    studentIds: ['student-4'],
-    hours: { 'student-4': 1 },
-    notes: { 'student-4': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
+    studentIds: ['student-3'],
+    hours: { 'student-3': 1 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (14:40~15:30, 1차시)' }
   },
   {
     id: '2026-07-31',
     date: '2026-07-31',
     studentIds: ['student-2', 'student-1'],
-    hours: { 'student-2': 4, 'student-1': 4 },
-    notes: { 'student-2': '중위권 지도 (09:00~12:10, 4차시)', 'student-1': '중위권 지도 (09:00~12:10, 4차시)' }
+    hours: { 'student-2': 3, 'student-1': 3 },
+    notes: { 'student-2': '중위권 지도 (3차시)', 'student-1': '중위권 지도 (3차시)' }
   },
 
-  // ================= 8월 (1순위 8차시 + 중위권 28차시) =================
+  // ================= 8월 =================
   {
     id: '2026-08-04',
     date: '2026-08-04',
     studentIds: ['student-2', 'student-1'],
-    hours: { 'student-2': 4, 'student-1': 4 },
-    notes: { 'student-2': '중위권 지도 (13:00~16:10, 4차시)', 'student-1': '중위권 지도 (13:00~16:10, 4차시)' }
+    hours: { 'student-2': 3, 'student-1': 3 },
+    notes: { 'student-2': '중위권 지도 (3차시)', 'student-1': '중위권 지도 (3차시)' }
   },
   {
     id: '2026-08-05',
     date: '2026-08-05',
     studentIds: ['student-2'],
-    hours: { 'student-2': 4 },
-    notes: { 'student-2': '중위권 개별 지도 (09:00~12:10, 4차시)' }
+    hours: { 'student-2': 3 },
+    notes: { 'student-2': '중위권 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-06',
     date: '2026-08-06',
     studentIds: ['student-3'],
-    hours: { 'student-3': 4 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
+    hours: { 'student-3': 3 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-07',
     date: '2026-08-07',
     studentIds: ['student-3'],
-    hours: { 'student-3': 4 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
+    hours: { 'student-3': 3 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-18',
     date: '2026-08-18',
     studentIds: ['student-2'],
-    hours: { 'student-2': 4 },
-    notes: { 'student-2': '중위권 개별 지도 (13:00~16:10, 4차시)' }
+    hours: { 'student-2': 3 },
+    notes: { 'student-2': '중위권 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-24',
     date: '2026-08-24',
-    studentIds: ['student-1'],
-    hours: { 'student-1': 4 },
-    notes: { 'student-1': '중위권 개별 지도 (09:00~12:10, 4차시)' }
+    studentIds: ['student-1790555167606'],
+    hours: { 'student-1790555167606': 3 },
+    notes: { 'student-1790555167606': '중위권 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-26',
     date: '2026-08-26',
-    studentIds: ['student-1'],
-    hours: { 'student-1': 4 },
-    notes: { 'student-1': '중위권 개별 지도 (13:00~16:10, 4차시)' }
+    studentIds: ['student-1790555167606'],
+    hours: { 'student-1790555167606': 3 },
+    notes: { 'student-1790555167606': '중위권 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-28',
     date: '2026-08-28',
-    studentIds: ['student-5'],
-    hours: { 'student-5': 4 },
-    notes: { 'student-5': '중위권 개별 지도 (09:00~12:10, 4차시)' }
+    studentIds: ['student-1790555167606'],
+    hours: { 'student-1790555167606': 3 },
+    notes: { 'student-1790555167606': '중위권 개별 지도 (3차시)' }
   },
   {
     id: '2026-08-31',
     date: '2026-08-31',
     studentIds: ['student-2', 'student-1'],
-    hours: { 'student-2': 4, 'student-1': 4 },
-    notes: { 'student-2': '중위권 지도 (09:00~12:10, 4차시)', 'student-1': '중위권 지도 (09:00~12:10, 4차시)' }
+    hours: { 'student-2': 3, 'student-1': 3 },
+    notes: { 'student-2': '중위권 지도 (3차시)', 'student-1': '중위권 지도 (3차시)' }
   },
 
-  // ================= 9월 (학교 PC 실제 일지 100% 일치) =================
+  // ================= 9월 =================
   {
     id: '2026-09-04',
     date: '2026-09-04',
     studentIds: ['student-3'],
-    hours: { 'student-3': 4 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
+    hours: { 'student-3': 3 },
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (3차시)' }
   },
   {
     id: '2026-09-07',
     date: '2026-09-07',
     studentIds: ['student-3'],
     hours: { 'student-3': 3 },
-    notes: { 'student-3': '1순위 맞춤형 개별 지도 (09:00~12:10, 4차시)' }
+    notes: { 'student-3': '1순위 맞춤형 개별 지도 (3차시)' }
   },
   {
     id: '2026-09-09',
@@ -479,6 +479,13 @@ export const INITIAL_RECORDS: TeachingRecord[] = [
   {
     id: '2026-09-28',
     date: '2026-09-28',
+    studentIds: ['student-1790555167606'],
+    hours: { 'student-1790555167606': 1 },
+    notes: { 'student-1790555167606': '중위권 맞춤형 개별 지도 (1차시)' }
+  },
+  {
+    id: '2026-09-29',
+    date: '2026-09-29',
     studentIds: ['student-1790555167606'],
     hours: { 'student-1790555167606': 1 },
     notes: { 'student-1790555167606': '중위권 맞춤형 개별 지도 (1차시)' }
